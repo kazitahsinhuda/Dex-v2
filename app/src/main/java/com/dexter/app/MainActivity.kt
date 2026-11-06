@@ -13,12 +13,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,6 +36,12 @@ import java.util.Locale
 
 private data class ChatMessage(val text: String, val fromUser: Boolean)
 
+private val AppBg = Color(0xFF212121)
+private val Panel = Color(0xFF2F2F2F)
+private val UserBubble = Color(0xFF303030)
+private val MainText = Color(0xFFECECEC)
+private val MutedText = Color(0xFF9A9A9A)
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,7 +53,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun DexterScreen() {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val messages = remember { mutableStateListOf(ChatMessage("Hey. I'm Dexter.", false)) }
+    val messages = remember { mutableStateListOf(ChatMessage("Hey. I'm Dexter. What's on your mind?", false)) }
     var input by remember { mutableStateOf("") }
     var mode by remember { mutableStateOf("Companion") }
     var sending by remember { mutableStateOf(false) }
@@ -70,9 +80,9 @@ private fun DexterScreen() {
     }
 
     fun sendMessage() {
-        val text = input.trim()
-        if (text.isEmpty() || sending) return
-        messages.add(ChatMessage(text, true))
+        val prompt = input.trim()
+        if (prompt.isEmpty() || sending) return
+        messages.add(ChatMessage(prompt, true))
         input = ""
         sending = true
         scope.launch {
@@ -91,98 +101,173 @@ private fun DexterScreen() {
     }
 
     MaterialTheme(colorScheme = darkColorScheme(
-        background = Color(0xFF101114),
-        surface = Color(0xFF191B20),
-        primary = Color(0xFFB6C7FF),
-        onBackground = Color(0xFFF1F0F7),
-        onSurface = Color(0xFFF1F0F7)
+        background = AppBg, surface = AppBg, surfaceVariant = Panel,
+        primary = Color(0xFFECECEC), onBackground = MainText, onSurface = MainText
     )) {
         Scaffold(
-            containerColor = Color(0xFF101114),
+            containerColor = AppBg,
             topBar = {
                 TopAppBar(
                     title = {
-                        Column {
-                            Text("DEXTER", fontSize = 17.sp)
-                            Text(mode, fontSize = 11.sp, color = Color.LightGray)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            Text("Dexter", fontSize = 18.sp, color = MainText)
+                            Text("▾", color = MutedText, fontSize = 15.sp)
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { menu = true }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menu", tint = MainText)
                         }
                     },
                     actions = {
-                        Box {
-                            TextButton(onClick = { menu = true }) { Text("Mode") }
-                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                                listOf("Companion", "Teaching", "Sparring").forEach { option ->
-                                    DropdownMenuItem(text = { Text(option) }, onClick = {
-                                        mode = option
-                                        menu = false
-                                    })
-                                }
-                            }
+                        IconButton(onClick = {
+                            messages.clear()
+                            messages.add(ChatMessage("New chat. I'm listening.", false))
+                        }) {
+                            Icon(Icons.Default.Add, contentDescription = "New chat", tint = MainText)
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF101114))
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = AppBg)
                 )
             },
             bottomBar = {
-                Row(
-                    Modifier.fillMaxWidth().background(Color(0xFF191B20)).padding(horizontal = 10.dp, vertical = 9.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { menu = true }) { Icon(Icons.Default.Add, "More") }
-                    BasicTextField(
-                        value = input,
-                        onValueChange = { input = it },
-                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
-                            .background(Color(0xFF282B32), RoundedCornerShape(22.dp))
-                            .padding(horizontal = 16.dp, vertical = 13.dp),
-                        textStyle = TextStyle(color = Color.White, fontSize = 15.sp),
-                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
-                        decorationBox = { inner ->
-                            if (input.isEmpty()) Text("Message Dexter...", color = Color.Gray)
-                            inner()
+                Column(Modifier.fillMaxWidth().background(AppBg).padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .background(Panel, RoundedCornerShape(28.dp))
+                            .padding(horizontal = 8.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Box {
+                            IconButton(onClick = { menu = true }) {
+                                Icon(Icons.Default.Add, contentDescription = "More options", tint = MainText)
+                            }
                         }
-                    )
-                    IconButton(onClick = {
-                        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                        BasicTextField(
+                            value = input,
+                            onValueChange = { input = it },
+                            modifier = Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 13.dp),
+                            textStyle = TextStyle(color = MainText, fontSize = 16.sp),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(MainText),
+                            decorationBox = { inner ->
+                                if (input.isEmpty()) Text("Message Dexter", color = MutedText, fontSize = 16.sp)
+                                inner()
+                            }
+                        )
+                        IconButton(onClick = {
+                            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                            }
+                            runCatching { speechLauncher.launch(intent) }
+                        }) {
+                            Icon(Icons.Default.Mic, contentDescription = "Voice input", tint = MainText)
                         }
-                        runCatching { speechLauncher.launch(intent) }
-                    }) { Icon(Icons.Default.Mic, "Voice input") }
-                    IconButton(onClick = { sendMessage() }, enabled = !sending) {
-                        Icon(Icons.Default.Send, "Send", tint = if (sending) Color.Gray else Color(0xFFB6C7FF))
+                        IconButton(
+                            onClick = { sendMessage() },
+                            enabled = input.isNotBlank() && !sending,
+                            modifier = Modifier.size(42.dp).background(
+                                if (input.isNotBlank() && !sending) Color.White else Color(0xFF555555),
+                                CircleShape
+                            )
+                        ) {
+                            Icon(Icons.Default.ArrowUpward, contentDescription = "Send", tint = Color(0xFF171717))
+                        }
                     }
+                    Text(
+                        "Dexter can make mistakes. Check important information.",
+                        modifier = Modifier.fillMaxWidth().padding(top = 7.dp),
+                        color = MutedText, fontSize = 10.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
                 }
             }
         ) { padding ->
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 14.dp),
-                state = listState,
-                contentPadding = PaddingValues(vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(messages) { msg ->
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = if (msg.fromUser) Arrangement.End else Arrangement.Start
+            Box(Modifier.fillMaxSize().padding(padding)) {
+                if (messages.size == 1 && !messages[0].fromUser) {
+                    Column(
+                        Modifier.fillMaxSize().padding(horizontal = 28.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            msg.text,
-                            modifier = Modifier.widthIn(max = 310.dp)
-                                .background(
-                                    if (msg.fromUser) Color(0xFF303846) else Color(0xFF1C1F25),
-                                    RoundedCornerShape(18.dp)
-                                )
-                                .padding(horizontal = 14.dp, vertical = 11.dp),
-                            color = Color(0xFFF2F2F5),
-                            fontSize = 15.sp
-                        )
+                        Text("D", color = MainText, fontSize = 34.sp,
+                            modifier = Modifier.background(Panel, CircleShape).padding(18.dp))
+                        Spacer(Modifier.height(18.dp))
+                        Text("What can I help with?", color = MainText, fontSize = 23.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Text("Chat, learn, plan, or challenge an idea.", color = MutedText, fontSize = 14.sp)
                     }
                 }
-                if (sending) item { Text("Dexter is thinking…", color = Color.Gray, fontSize = 12.sp) }
-            }
-            LaunchedEffect(messages.size) {
-                listState.animateScrollToItem(messages.lastIndex.coerceAtLeast(0))
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    state = listState,
+                    contentPadding = PaddingValues(top = 18.dp, bottom = 18.dp),
+                    verticalArrangement = Arrangement.spacedBy(22.dp)
+                ) {
+                    items(messages) { msg ->
+                        if (msg.fromUser) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                Text(
+                                    msg.text,
+                                    modifier = Modifier.widthIn(max = 300.dp)
+                                        .background(UserBubble, RoundedCornerShape(22.dp))
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    color = MainText, fontSize = 15.sp, lineHeight = 22.sp
+                                )
+                            }
+                        } else {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                                Text(
+                                    "D",
+                                    modifier = Modifier.padding(end = 11.dp)
+                                        .background(Panel, CircleShape).padding(horizontal = 9.dp, vertical = 6.dp),
+                                    color = MainText, fontSize = 13.sp
+                                )
+                                Text(
+                                    msg.text,
+                                    modifier = Modifier.weight(1f).padding(top = 4.dp),
+                                    color = MainText, fontSize = 15.sp, lineHeight = 23.sp
+                                )
+                            }
+                        }
+                    }
+                    if (sending) item {
+                        Text("Dexter is thinking…", color = MutedText, fontSize = 13.sp,
+                            modifier = Modifier.padding(start = 42.dp))
+                    }
+                }
+                LaunchedEffect(messages.size) {
+                    if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(
+                        text = { Text("New chat") },
+                        leadingIcon = { Icon(Icons.Default.Add, null) },
+                        onClick = {
+                            messages.clear()
+                            messages.add(ChatMessage("New chat. What's on your mind?", false))
+                            menu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Clear conversation") },
+                        leadingIcon = { Icon(Icons.Default.DeleteOutline, null) },
+                        onClick = {
+                            messages.clear()
+                            messages.add(ChatMessage("Conversation cleared.", false))
+                            menu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Mode: $mode") },
+                        leadingIcon = { Icon(Icons.Default.Tune, null) },
+                        onClick = { mode = when (mode) {
+                            "Companion" -> "Teaching"
+                            "Teaching" -> "Sparring"
+                            else -> "Companion"
+                        }; menu = false }
+                    )
+                }
             }
         }
     }
