@@ -18,7 +18,7 @@ object GeminiClient {
 
     suspend fun reply(history: List<Pair<String, String>>, mode: String): String = withContext(Dispatchers.IO) {
         val key = BuildConfig.GEMINI_API_KEY
-        require(key.isNotBlank()) { "Gemini API key is missing. Add the GitHub Actions secret named Api." }
+        require(key.isNotBlank()) { "Gemini API key is missing. Add the GitHub Actions secret named Dexv2api." }
 
         val contents = JSONArray()
         history.takeLast(24).forEach { (role, text) ->
