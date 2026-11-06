@@ -27,7 +27,12 @@ jobs:
       - name: Build debug APK
         env:
           GEMINI_API_KEY: ${{ secrets.Dexv2api }}
-        run: gradle --no-daemon assembleDebug
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "ERROR: GitHub Actions secret Dexv2api is missing or empty."
+            exit 1
+          fi
+          gradle --no-daemon assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: dexter-debug-apk
