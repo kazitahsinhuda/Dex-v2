@@ -26,10 +26,10 @@ jobs:
           gradle-version: "8.7"
       - name: Build debug APK
         env:
-          GEMINI_API_KEY: ${{ secrets.Dexv2api }}
+          GEMINI_API_KEY: ${{ secrets.DEXV2KEYY }}
         run: |
           if [ -z "$GEMINI_API_KEY" ]; then
-            echo "ERROR: GitHub Actions secret Dexv2api is missing or empty."
+            echo "ERROR: GitHub Actions secret DEXV2KEYY is missing or empty."
             exit 1
           fi
           gradle --no-daemon assembleDebug
