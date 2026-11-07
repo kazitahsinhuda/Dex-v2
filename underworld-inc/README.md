@@ -24,3 +24,6 @@ This project uses Godot 4.3 with the Compatibility renderer.
 The GitHub Actions workflow in `.github/workflows/underworld-android.yml` exports a debug APK and uploads it as a workflow artifact.
 
 The first build is a prototype. Art, models, sound, more missions, saving, and optimization will be expanded in later builds.
+
+
+Build workflow uses the Godot CI 4.3 container image and exports from this project directory.
