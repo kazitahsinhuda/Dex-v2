@@ -1,0 +1,35 @@
+name: Underworld Inc Android APK
+
+on:
+  push:
+    branches:
+      - underworld-inc-first-build
+    paths:
+      - "underworld-inc/**"
+      - ".github/workflows/underworld-android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export-android:
+    name: Export Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Export Godot project
+        uses: barichello/godot-ci@v4.3.0
+        with:
+          name: underworld-inc
+          preset: Android
+          project: underworld-inc/
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: underworld-inc-android
+          path: underworld-inc/build/underworld-inc.apk
+          if-no-files-found: error
