@@ -283,8 +283,9 @@ func _move_player(delta: float) -> void:
 	var direction := Vector3(x, 0, z).normalized()
 	if direction.length() > 0.05:
 		player.rotation.y = atan2(direction.x, direction.z)
-	player.velocity.x = direction.x * WALK_SPEED
-	player.velocity.z = direction.z * WALK_SPEED
+	var movement_speed: float = WALK_SPEED * (1.65 if held.get("run", false) else 1.0)
+	player.velocity.x = direction.x * movement_speed
+	player.velocity.z = direction.z * movement_speed
 	if not player.is_on_floor():
 		player.velocity.y -= 22.0 * delta
 	else:
@@ -302,7 +303,7 @@ func _drive_car(delta: float) -> void:
 		steering -= 1.0
 	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
 		steering += 1.0
-	var speed_factor := clamp(abs(throttle), 0.0, 1.0)
+	var speed_factor: float = clampf(absf(throttle), 0.0, 1.0)
 	car.rotation.y -= steering * TURN_SPEED * delta * max(speed_factor, 0.25) * sign(throttle if throttle != 0.0 else 1.0)
 	var forward_dir := -car.global_transform.basis.z
 	car.velocity.x = forward_dir.x * throttle * CAR_SPEED
