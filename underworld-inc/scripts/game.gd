@@ -63,9 +63,9 @@ func _build_world() -> void:
 	add_child(sign)
 
 	# Reception desk and a highlighted mission marker.
-	_make_box("Reception desk", Vector3(0, 0.65, -8), Vector3(3.8, 1.3, 1.1), Color(0.12, 0.15, 0.19), self)
-	_make_box("Desk top", Vector3(0, 1.34, -8), Vector3(4.0, 0.12, 1.2), Color(0.65, 0.48, 0.30), self)
-	_make_box("Mission marker", Vector3(0, 0.08, -5.8), Vector3(2.0, 0.06, 2.0), Color(0.88, 0.62, 0.16, 0.8), self)
+	_make_box("Reception desk", Vector3(0, 0.65, -1.2), Vector3(3.8, 1.3, 1.1), Color(0.12, 0.15, 0.19), self)
+	_make_box("Desk top", Vector3(0, 1.34, -1.2), Vector3(4.0, 0.12, 1.2), Color(0.65, 0.48, 0.30), self)
+	_make_box("Mission marker", Vector3(0, 0.08, -3.0), Vector3(2.0, 0.06, 2.0), Color(0.88, 0.62, 0.16, 0.8), self)
 
 	# A small city block around the dealership.
 	_make_building(Vector3(-19, 0, -17), Vector3(12, 13, 13), Color(0.31, 0.36, 0.43))
@@ -335,7 +335,7 @@ func _interact() -> void:
 		_update_hud()
 		return
 
-	var desk_pos := Vector3(0, 0, -8)
+	var desk_pos := Vector3(0, 0, -1.2)
 	if not first_deal_done and player_pos.distance_to(desk_pos) < 5.0:
 		first_deal_done = true
 		_show_message("A folder is waiting on the desk. One name is circled: MARCUS VALE. Your father's old business partner. Why is his number here?")
