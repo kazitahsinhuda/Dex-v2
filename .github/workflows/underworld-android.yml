@@ -16,16 +16,16 @@ jobs:
   export-android:
     name: Export Android APK
     runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.3.0
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Export Godot project
-        uses: barichello/godot-ci@v4.3.0
-        with:
-          name: underworld-inc
-          preset: Android
-          project: underworld-inc/
+      - name: Export debug APK
+        run: |
+          mkdir -p underworld-inc/build
+          godot --headless --verbose --path underworld-inc --export-debug Android underworld-inc/build/underworld-inc.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
