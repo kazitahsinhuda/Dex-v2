@@ -24,6 +24,8 @@ jobs:
 
       - name: Export debug APK
         working-directory: underworld-inc
+        env:
+          HOME: /root
         run: |
           mkdir -p build
           godot --headless --verbose --path . --export-debug Android build/underworld-inc.apk
