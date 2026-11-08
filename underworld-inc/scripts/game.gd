@@ -6,6 +6,9 @@ const TURN_SPEED := 1.7
 
 var player: CharacterBody3D
 var player_visual: MeshInstance3D
+var player_legs: Array[MeshInstance3D] = []
+var player_arms: Array[MeshInstance3D] = []
+var walk_time := 0.0
 var car: CharacterBody3D
 var camera: Camera3D
 var hud: Label
@@ -263,6 +266,7 @@ func _build_player() -> void:
 		leg.position = Vector3(side * 0.19, 0.34, 0)
 		leg.material_override = _material(Color(0.075, 0.09, 0.13))
 		player.add_child(leg)
+		player_legs.append(leg)
 		var arm := MeshInstance3D.new()
 		var arm_mesh := CapsuleMesh.new()
 		arm_mesh.radius = 0.12
@@ -272,6 +276,7 @@ func _build_player() -> void:
 		arm.rotation.z = side * -0.16
 		arm.material_override = _material(Color(0.12, 0.25, 0.48))
 		player.add_child(arm)
+		player_arms.append(arm)
 		var shoe := MeshInstance3D.new()
 		var shoe_mesh := BoxMesh.new()
 		shoe_mesh.size = Vector3(0.28, 0.13, 0.42)
@@ -620,6 +625,21 @@ func _move_player(delta: float) -> void:
 	else:
 		player.velocity.y = -0.1
 	player.move_and_slide()
+	_animate_player(delta)
+
+func _animate_player(delta: float) -> void:
+	var moving := Vector2(player.velocity.x, player.velocity.z).length() > 0.5
+	if moving:
+		walk_time += delta * (13.0 if held.get("run", false) else 9.0)
+	for i in range(player_legs.size()):
+		var swing := sin(walk_time + float(i) * PI) * 0.48 if moving else 0.0
+		player_legs[i].rotation.x = lerp_angle(player_legs[i].rotation.x, swing, delta * 12.0)
+	for i in range(player_arms.size()):
+		var swing := -sin(walk_time + float(i) * PI) * 0.32 if moving else 0.0
+		player_arms[i].rotation.x = lerp_angle(player_arms[i].rotation.x, swing, delta * 12.0)
+	if is_instance_valid(player_visual):
+		var bob := absf(sin(walk_time * 2.0)) * 0.045 if moving else 0.0
+		player_visual.position.y = lerpf(player_visual.position.y, 0.88 + bob, delta * 10.0)
 
 func _drive_car(delta: float) -> void:
 	var throttle := float(held.get("forward", false)) - float(held.get("back", false))
