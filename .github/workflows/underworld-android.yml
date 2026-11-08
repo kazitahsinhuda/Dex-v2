@@ -22,16 +22,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare Godot Android environment
+      - name: Prepare Godot and Android SDK
         run: |
           mkdir -p "$HOME/.config" "$HOME/.local/share/godot/export_templates"
           cp -a /root/.config/godot "$HOME/.config/godot"
           cp -a /root/.local/share/godot/export_templates/4.3.stable "$HOME/.local/share/godot/export_templates/4.3.stable"
-          echo "HOME=$HOME"
-          echo "Godot settings:"
-          cat "$HOME/.config/godot/editor_settings-4.3.tres"
-          echo "Android template files:"
-          ls -lah "$HOME/.local/share/godot/export_templates/4.3.stable"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls -lah "$ANDROID_HOME"
+          yes | "$ANDROID_HOME/cmdline-tools/cmdline-tools/bin/sdkmanager" --sdk_root="$ANDROID_HOME" "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+          yes | "$ANDROID_HOME/cmdline-tools/cmdline-tools/bin/sdkmanager" --sdk_root="$ANDROID_HOME" --licenses
+          ls -lah "$ANDROID_HOME/build-tools"
+          ls -lah "$ANDROID_HOME/platforms"
 
       - name: Import project
         working-directory: underworld-inc
@@ -42,6 +43,7 @@ jobs:
         run: |
           mkdir -p build
           godot --headless --verbose --path . --export-debug Android build/underworld-inc.apk
+          test -s build/underworld-inc.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
