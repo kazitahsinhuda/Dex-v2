@@ -21,6 +21,10 @@ var stock_owned := false
 var marcus: Node3D
 var package_crate: Node3D
 var mission_marker: Node3D
+var police_car: CharacterBody3D
+var police_active := false
+var wanted_timer := 0.0
+var police_flash_timer := 0.0
 var sun_light: DirectionalLight3D
 var day_clock := 8.2
 var save_timer := 0.0
@@ -31,6 +35,7 @@ func _ready() -> void:
 	_build_world()
 	_build_player()
 	_build_car()
+	_build_police_car()
 	_build_story_characters()
 	_build_camera()
 	_build_ui()
@@ -341,6 +346,84 @@ func _build_car() -> void:
 			car.add_child(wheel)
 	add_child(car)
 
+func _build_police_car() -> void:
+	police_car = CharacterBody3D.new()
+	police_car.name = "Westbridge Police Cruiser"
+	police_car.position = Vector3(-42, 0.72, 15)
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(2.0, 1.2, 4.0)
+	collision.shape = shape
+	police_car.add_child(collision)
+	var body := MeshInstance3D.new()
+	var body_mesh := BoxMesh.new()
+	body_mesh.size = Vector3(2.0, 0.72, 4.0)
+	body.mesh = body_mesh
+	body.material_override = _material(Color(0.82, 0.84, 0.86))
+	police_car.add_child(body)
+	var hood := MeshInstance3D.new()
+	var hood_mesh := BoxMesh.new()
+	hood_mesh.size = Vector3(1.9, 0.12, 1.15)
+	hood.mesh = hood_mesh
+	hood.position = Vector3(0, 0.40, -1.28)
+	hood.material_override = _material(Color(0.08, 0.12, 0.18))
+	police_car.add_child(hood)
+	var roof := MeshInstance3D.new()
+	var roof_mesh := BoxMesh.new()
+	roof_mesh.size = Vector3(1.45, 0.55, 1.8)
+	roof.mesh = roof_mesh
+	roof.position.y = 0.62
+	roof.material_override = _material(Color(0.12, 0.18, 0.25))
+	police_car.add_child(roof)
+	var lightbar := MeshInstance3D.new()
+	var lightbar_mesh := BoxMesh.new()
+	lightbar_mesh.size = Vector3(1.05, 0.18, 0.28)
+	lightbar.mesh = lightbar_mesh
+	lightbar.position = Vector3(0, 1.0, 0)
+	lightbar.material_override = _material(Color(0.9, 0.08, 0.06))
+	police_car.add_child(lightbar)
+	police_car.visible = false
+	add_child(police_car)
+
+func _update_police(delta: float) -> void:
+	if not police_active or not is_instance_valid(police_car):
+		return
+	wanted_timer -= delta
+	police_flash_timer += delta
+	if police_flash_timer >= 0.35:
+		police_flash_timer = 0.0
+		var bar := police_car.get_node_or_null("MeshInstance3D") as MeshInstance3D
+		if bar:
+			bar.material_override = _material(Color(0.12, 0.28, 0.95) if int(Time.get_ticks_msec() / 350) % 2 == 0 else Color(0.95, 0.08, 0.06))
+	var target: Node3D = car if in_car else player
+	var chase := target.global_position - police_car.global_position
+	chase.y = 0.0
+	var distance := chase.length()
+	if distance > 2.8:
+		var direction := chase.normalized()
+		police_car.rotation.y = atan2(-direction.x, -direction.z)
+		police_car.velocity.x = direction.x * 12.5
+		police_car.velocity.z = direction.z * 12.5
+		police_car.velocity.y = 0.0
+		police_car.move_and_slide()
+	else:
+		police_active = false
+		police_car.visible = false
+		cash = maxi(0, cash - 500)
+		in_car = false
+		player.visible = true
+		player.global_position = Vector3(0, 1.0, 5)
+		car.global_position = Vector3(5, 0.75, 1)
+		_show_message("BUSTED. The police impounded your run and fined you $500. The package is safe — get back to the dealership.")
+		_update_hud()
+		_save_game()
+		return
+	if wanted_timer <= 0.0:
+		police_active = false
+		police_car.visible = false
+		_show_message("You lost the police. Get the package back to Westbridge Motors.")
+		_update_hud()
+
 func _build_story_characters() -> void:
 	marcus = Node3D.new()
 	marcus.name = "Marcus Vale"
@@ -503,6 +586,7 @@ func _physics_process(delta: float) -> void:
 		_drive_car(delta)
 	else:
 		_move_player(delta)
+	_update_police(delta)
 	if Input.is_action_just_pressed("ui_accept"):
 		_interact()
 
@@ -626,7 +710,11 @@ func _interact() -> void:
 		mission_stage = 3
 		package_crate.visible = false
 		cash += 750
-		_show_message("PACKAGE SECURED. Inside: a ledger page and a photograph of your father with Marcus. +$750. Return to Westbridge Motors.")
+		police_active = true
+		wanted_timer = 55.0
+		police_car.visible = true
+		police_car.global_position = Vector3(-42, 0.72, 15)
+		_show_message("PACKAGE SECURED. +$750. A yard lookout spotted you — POLICE INBOUND. Lose them and get back to Westbridge Motors!")
 		_update_mission_marker()
 		_update_hud()
 		_save_game()
@@ -695,3 +783,5 @@ func _update_hud() -> void:
 			objective.text = "MISSION 01  |  Return to Westbridge Motors with the package."
 		_:
 			objective.text = "WESTBRIDGE MOTORS  |  Buy trade-ins for $1,200 and sell for $1,950. Build your business."
+	if police_active:
+		objective.text += "     |     HEAT: 1"
