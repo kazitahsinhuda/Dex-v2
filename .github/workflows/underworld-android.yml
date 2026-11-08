@@ -49,6 +49,14 @@ jobs:
           fi
         shell: bash
 
+      - name: Run story and dealership gameplay tests
+        working-directory: underworld-inc
+        run: |
+          set -e
+          godot --headless --path . --script res://tests/gameplay_test.gd 2>&1 | tee /tmp/underworld-gameplay-test.log
+          grep -q "UNDERWORLD GAMEPLAY TEST: PASS" /tmp/underworld-gameplay-test.log
+        shell: bash
+
       - name: Export signed debug APK
         working-directory: underworld-inc
         run: |
