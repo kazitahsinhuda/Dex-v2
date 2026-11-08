@@ -33,6 +33,15 @@ var day_clock := 8.2
 var save_timer := 0.0
 var story_message := "WESTBRIDGE, 8:12 AM — Your father's old dealership is finally yours."
 var message_timer := 7.0
+var intro_active := false
+var intro_index := 0
+var intro_lines: Array[String] = [
+	"Alex Carter. 7:40 AM. Another shift, another empty promise.",
+	"MANAGER: You're fired, Alex. The company is cutting staff. Clear your locker.",
+	"Three weeks later. Rent is overdue. Your savings are almost gone.",
+	"A letter arrives from a lawyer: your father has left you a property in Westbridge.",
+	"An abandoned car dealership. It may be your only chance to start over."
+]
 
 func _ready() -> void:
 	_build_world()
@@ -45,6 +54,8 @@ func _ready() -> void:
 	_build_mission_marker()
 	_load_game()
 	_update_hud()
+	if mission_stage == 0:
+		_start_intro()
 
 func _build_world() -> void:
 	var world_env := WorldEnvironment.new()
@@ -670,7 +681,36 @@ func _follow_camera(delta: float) -> void:
 	camera.global_position = camera.global_position.lerp(desired, clamp(delta * 5.0, 0.0, 1.0))
 	camera.look_at(target.global_position + Vector3(0, 1.1, 0))
 
+func _start_intro() -> void:
+	intro_active = true
+	intro_index = 0
+	_show_message(intro_lines[intro_index] + "  (Tap INTERACT to continue)")
+	objective.text = "PROLOGUE  |  ALEX CARTER — BEFORE WESTBRIDGE"
+
+func _advance_intro() -> void:
+	intro_index += 1
+	if intro_index >= intro_lines.size():
+		intro_active = false
+		_show_message("You arrive at Westbridge Motors. The keys are yours. Take a look around, then check the reception desk.")
+		_update_hud()
+		return
+	_show_message(intro_lines[intro_index] + "  (Tap INTERACT to continue)")
+
+func _speak_message(line: String) -> void:
+	# Use the device speech engine; gameplay remains available if TTS is unsupported.
+	var voices: Array = DisplayServer.tts_get_voices()
+	if voices.is_empty():
+		return
+	var voice_id := str(voices[0].get("id", ""))
+	if voice_id.is_empty():
+		return
+	DisplayServer.tts_stop()
+	DisplayServer.tts_speak(line, voice_id, 50, 1.0, 1.0, 1)
+
 func _interact() -> void:
+	if intro_active:
+		_advance_intro()
+		return
 	if in_car:
 		in_car = false
 		player.global_position = car.global_position + car.global_transform.basis.x * 2.2 + Vector3(0, 0.2, 0)
@@ -753,6 +793,7 @@ func _interact() -> void:
 func _show_message(text_value: String) -> void:
 	message.text = text_value
 	message_timer = 9.0
+	_speak_message(text_value)
 
 func _update_mission_marker() -> void:
 	if not is_instance_valid(mission_marker):
