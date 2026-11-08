@@ -10,7 +10,8 @@ func _run_tests() -> void:
 	root.add_child(game)
 	await process_frame
 
-	# Start from a clean career and verify the full first-chapter loop.
+	# Start from a clean career and skip the opening prologue for this mission-loop test.
+	game.intro_active = false
 	game.mission_stage = 0
 	game.cash = 2450
 	game.sales_completed = 0
