@@ -38,16 +38,29 @@ jobs:
         working-directory: underworld-inc
         run: godot --headless --editor --path . --quit
 
-      - name: Export debug APK
+      - name: Export signed debug APK
         working-directory: underworld-inc
         run: |
-          mkdir -p build
+          set -euxo pipefail
+          mkdir -p build "$HOME/.android"
+          keytool -genkeypair -v \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android -keypass android \
+            -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
           godot --headless --verbose --path . --export-debug Android build/underworld-inc.apk
           test -s build/underworld-inc.apk
+          "$ANDROID_HOME/build-tools/33.0.2/apksigner" verify --verbose --print-certs build/underworld-inc.apk
+          "$ANDROID_HOME/build-tools/33.0.2/aapt" dump badging build/underworld-inc.apk | grep -E "package: name='com.mrotaku.underworldinc'|application-label:'UNDERWORLD INC.'"
+          unzip -t build/underworld-inc.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: underworld-inc-android
+          name: underworld-inc-android-signed
           path: underworld-inc/build/underworld-inc.apk
           if-no-files-found: error
