@@ -280,10 +280,17 @@ func _move_player(delta: float) -> void:
 		z -= 1.0
 	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
 		z += 1.0
-	var direction := Vector3(x, 0, z).normalized()
+	# Move relative to the fixed third-person camera, not world axes.
+	var camera_forward := -camera.global_transform.basis.z
+	camera_forward.y = 0.0
+	camera_forward = camera_forward.normalized()
+	var camera_right := camera.global_transform.basis.x
+	camera_right.y = 0.0
+	camera_right = camera_right.normalized()
+	var direction := (camera_right * x + camera_forward * -z).normalized()
 	if direction.length() > 0.05:
 		player.rotation.y = atan2(direction.x, direction.z)
-	var movement_speed: float = WALK_SPEED * (1.65 if held.get("run", false) else 1.0)
+	var movement_speed: float = WALK_SPEED * (1.8 if held.get("run", false) else 1.0)
 	player.velocity.x = direction.x * movement_speed
 	player.velocity.z = direction.z * movement_speed
 	if not player.is_on_floor():
@@ -315,7 +322,9 @@ func _follow_camera(delta: float) -> void:
 	var target: Node3D = car if in_car else player
 	var distance := 9.0 if in_car else 7.0
 	var height := 4.0 if in_car else 3.4
-	var desired := target.global_position + target.global_transform.basis.z * distance + Vector3(0, height, 0)
+	# Keep the third-person camera behind the player without orbiting when
+	# the player turns. This prevents the arrow buttons from spinning the view.
+	var desired := target.global_position + Vector3(0, height, distance)
 	camera.global_position = camera.global_position.lerp(desired, clamp(delta * 5.0, 0.0, 1.0))
 	camera.look_at(target.global_position + Vector3(0, 1.1, 0))
 
