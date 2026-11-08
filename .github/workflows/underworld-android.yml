@@ -38,6 +38,17 @@ jobs:
         working-directory: underworld-inc
         run: godot --headless --editor --path . --quit
 
+      - name: Run headless gameplay smoke test
+        working-directory: underworld-inc
+        run: |
+          set -e
+          godot --headless --path . --quit-after 120 2>&1 | tee /tmp/underworld-smoke.log
+          if grep -E "SCRIPT ERROR|Parse Error|Invalid call|Invalid set index" /tmp/underworld-smoke.log; then
+            echo "Gameplay smoke test reported a script error."
+            exit 1
+          fi
+        shell: bash
+
       - name: Export signed debug APK
         working-directory: underworld-inc
         run: |
