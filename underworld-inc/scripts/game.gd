@@ -98,6 +98,68 @@ func _build_world() -> void:
 		_make_tree(tree_pos)
 	for lamp_pos in [Vector3(-12, 0, 11), Vector3(12, 0, 11), Vector3(-12, 0, 19), Vector3(12, 0, 19), Vector3(31, 0, -12), Vector3(-31, 0, -12)]:
 		_make_streetlight(lamp_pos)
+	_make_parked_car(Vector3(-8, 0.7, 11), Color(0.48, 0.16, 0.12), PI / 2.0)
+	_make_parked_car(Vector3(8, 0.7, 11), Color(0.12, 0.27, 0.42), -PI / 2.0)
+	_make_parked_car(Vector3(-34, 0.7, 12), Color(0.42, 0.42, 0.39), 0.0)
+	_make_parked_car(Vector3(34, 0.7, 12), Color(0.16, 0.34, 0.24), PI)
+	_make_pedestrian(Vector3(-8, 0, 5), Color(0.42, 0.18, 0.16))
+	_make_pedestrian(Vector3(12, 0, 6), Color(0.18, 0.32, 0.42))
+	_make_pedestrian(Vector3(-17, 0, -5), Color(0.46, 0.38, 0.20))
+	_make_pedestrian(Vector3(18, 0, -8), Color(0.28, 0.25, 0.38))
+	_make_pedestrian(Vector3(-36, 0, -18), Color(0.20, 0.37, 0.27))
+
+func _make_parked_car(pos: Vector3, paint: Color, facing: float) -> void:
+	var vehicle := Node3D.new()
+	vehicle.position = pos
+	vehicle.rotation.y = facing
+	var body := MeshInstance3D.new()
+	var body_mesh := BoxMesh.new()
+	body_mesh.size = Vector3(1.8, 0.65, 3.6)
+	body.mesh = body_mesh
+	body.position.y = 0.0
+	body.material_override = _material(paint)
+	vehicle.add_child(body)
+	var cabin := MeshInstance3D.new()
+	var cabin_mesh := BoxMesh.new()
+	cabin_mesh.size = Vector3(1.42, 0.72, 1.75)
+	cabin.mesh = cabin_mesh
+	cabin.position = Vector3(0, 0.62, -0.1)
+	cabin.material_override = _material(Color(0.07, 0.14, 0.19))
+	vehicle.add_child(cabin)
+	for x in [-0.92, 0.92]:
+		for z in [-1.15, 1.15]:
+			var wheel := MeshInstance3D.new()
+			var wheel_mesh := CylinderMesh.new()
+			wheel_mesh.top_radius = 0.31
+			wheel_mesh.bottom_radius = 0.31
+			wheel_mesh.height = 0.2
+			wheel.mesh = wheel_mesh
+			wheel.rotation_degrees.z = 90
+			wheel.position = Vector3(x, -0.28, z)
+			wheel.material_override = _material(Color(0.02, 0.025, 0.03))
+			vehicle.add_child(wheel)
+	add_child(vehicle)
+
+func _make_pedestrian(pos: Vector3, clothing: Color) -> void:
+	var person := Node3D.new()
+	person.position = pos
+	var torso := MeshInstance3D.new()
+	var torso_mesh := CapsuleMesh.new()
+	torso_mesh.radius = 0.27
+	torso_mesh.height = 1.15
+	torso.mesh = torso_mesh
+	torso.position.y = 0.78
+	torso.material_override = _material(clothing)
+	person.add_child(torso)
+	var head := MeshInstance3D.new()
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.19
+	head_mesh.height = 0.38
+	head.mesh = head_mesh
+	head.position.y = 1.52
+	head.material_override = _material(Color(0.66, 0.47, 0.35))
+	person.add_child(head)
+	add_child(person)
 
 func _make_tree(pos: Vector3) -> void:
 	var trunk := MeshInstance3D.new()
@@ -178,22 +240,57 @@ func _build_player() -> void:
 	collision.shape = capsule
 	player.add_child(collision)
 
+	# Alex Carter — a simple low-poly character rather than a featureless capsule.
 	player_visual = MeshInstance3D.new()
-	var body_mesh := CapsuleMesh.new()
-	body_mesh.radius = 0.38
-	body_mesh.height = 1.8
-	player_visual.mesh = body_mesh
-	player_visual.material_override = _material(Color(0.16, 0.30, 0.58))
+	var torso_mesh := BoxMesh.new()
+	torso_mesh.size = Vector3(0.72, 0.82, 0.42)
+	player_visual.mesh = torso_mesh
+	player_visual.position.y = 0.88
+	player_visual.material_override = _material(Color(0.12, 0.25, 0.48))
 	player.add_child(player_visual)
+
+	for side in [-1.0, 1.0]:
+		var leg := MeshInstance3D.new()
+		var leg_mesh := CapsuleMesh.new()
+		leg_mesh.radius = 0.15
+		leg_mesh.height = 0.78
+		leg.mesh = leg_mesh
+		leg.position = Vector3(side * 0.19, 0.34, 0)
+		leg.material_override = _material(Color(0.075, 0.09, 0.13))
+		player.add_child(leg)
+		var arm := MeshInstance3D.new()
+		var arm_mesh := CapsuleMesh.new()
+		arm_mesh.radius = 0.12
+		arm_mesh.height = 0.72
+		arm.mesh = arm_mesh
+		arm.position = Vector3(side * 0.43, 0.91, 0)
+		arm.rotation.z = side * -0.16
+		arm.material_override = _material(Color(0.12, 0.25, 0.48))
+		player.add_child(arm)
+		var shoe := MeshInstance3D.new()
+		var shoe_mesh := BoxMesh.new()
+		shoe_mesh.size = Vector3(0.28, 0.13, 0.42)
+		shoe.mesh = shoe_mesh
+		shoe.position = Vector3(side * 0.19, 0.08, -0.07)
+		shoe.material_override = _material(Color(0.025, 0.03, 0.04))
+		player.add_child(shoe)
 
 	var head := MeshInstance3D.new()
 	var head_mesh := SphereMesh.new()
 	head_mesh.radius = 0.24
 	head_mesh.height = 0.48
 	head.mesh = head_mesh
-	head.position = Vector3(0, 0.88, 0)
+	head.position = Vector3(0, 1.52, 0)
 	head.material_override = _material(Color(0.72, 0.52, 0.39))
 	player.add_child(head)
+	var hair := MeshInstance3D.new()
+	var hair_mesh := SphereMesh.new()
+	hair_mesh.radius = 0.245
+	hair_mesh.height = 0.22
+	hair.mesh = hair_mesh
+	hair.position = Vector3(0, 1.68, 0.015)
+	hair.material_override = _material(Color(0.08, 0.065, 0.055))
+	player.add_child(hair)
 	add_child(player)
 
 func _build_car() -> void:
@@ -222,6 +319,14 @@ func _build_car() -> void:
 	cabin.material_override = _material(Color(0.16, 0.34, 0.43))
 	car.add_child(cabin)
 
+	# Windshield, rear glass, bumpers and headlights give the starter car a readable silhouette.
+	_make_box("Front windshield", Vector3(0, 1.02, -0.92), Vector3(1.38, 0.48, 0.07), Color(0.045, 0.10, 0.15, 0.92), car)
+	_make_box("Rear windshield", Vector3(0, 1.02, 0.70), Vector3(1.38, 0.48, 0.07), Color(0.045, 0.10, 0.15, 0.92), car)
+	_make_box("Front bumper", Vector3(0, -0.12, -2.02), Vector3(1.95, 0.22, 0.16), Color(0.055, 0.065, 0.075), car)
+	_make_box("Rear bumper", Vector3(0, -0.12, 2.02), Vector3(1.95, 0.22, 0.16), Color(0.055, 0.065, 0.075), car)
+	for x in [-0.68, 0.68]:
+		_make_box("Headlight", Vector3(x, 0.18, -2.03), Vector3(0.42, 0.22, 0.07), Color(0.96, 0.88, 0.63), car)
+		_make_box("Tail light", Vector3(x, 0.18, 2.03), Vector3(0.38, 0.22, 0.07), Color(0.68, 0.08, 0.055), car)
 	for x in [-1.0, 1.0]:
 		for z in [-1.25, 1.25]:
 			var wheel := MeshInstance3D.new()
