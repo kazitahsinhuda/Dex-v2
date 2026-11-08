@@ -14,6 +14,16 @@ var message: Label
 var held: Dictionary = {}
 var in_car := false
 var first_deal_done := false
+var mission_stage := 0
+var cash := 2450
+var sales_completed := 0
+var stock_owned := false
+var marcus: Node3D
+var package_crate: Node3D
+var mission_marker: Node3D
+var sun_light: DirectionalLight3D
+var day_clock := 8.2
+var save_timer := 0.0
 var story_message := "WESTBRIDGE, 8:12 AM — Your father's old dealership is finally yours."
 var message_timer := 7.0
 
@@ -21,8 +31,11 @@ func _ready() -> void:
 	_build_world()
 	_build_player()
 	_build_car()
+	_build_story_characters()
 	_build_camera()
 	_build_ui()
+	_build_mission_marker()
+	_load_game()
 	_update_hud()
 
 func _build_world() -> void:
@@ -37,11 +50,11 @@ func _build_world() -> void:
 	world_env.environment = env
 	add_child(world_env)
 
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-48, -28, 0)
-	sun.light_energy = 1.25
-	sun.shadow_enabled = true
-	add_child(sun)
+	sun_light = DirectionalLight3D.new()
+	sun_light.rotation_degrees = Vector3(-48, -28, 0)
+	sun_light.light_energy = 1.25
+	sun_light.shadow_enabled = true
+	add_child(sun_light)
 
 	_make_static_box("Ground", Vector3(0, -0.25, 0), Vector3(100, 0.5, 100), Color(0.18, 0.23, 0.22))
 	_make_static_box("Main road", Vector3(0, 0.015, 15), Vector3(100, 0.08, 12), Color(0.075, 0.085, 0.10))
@@ -73,7 +86,42 @@ func _build_world() -> void:
 	_make_building(Vector3(-20, 0, 8), Vector3(12, 9, 13), Color(0.32, 0.39, 0.39))
 	_make_building(Vector3(21, 0, 8), Vector3(14, 11, 14), Color(0.36, 0.35, 0.42))
 	_make_building(Vector3(0, 0, -36), Vector3(20, 19, 12), Color(0.28, 0.33, 0.40))
+	# More blocks make Westbridge feel like a connected district rather than a test platform.
+	_make_building(Vector3(-39, 0, -34), Vector3(11, 15, 15), Color(0.30, 0.34, 0.39))
+	_make_building(Vector3(40, 0, -36), Vector3(12, 21, 14), Color(0.35, 0.32, 0.31))
+	_make_building(Vector3(-42, 0, 4), Vector3(14, 10, 16), Color(0.34, 0.39, 0.40))
+	_make_building(Vector3(42, 0, 5), Vector3(13, 14, 16), Color(0.31, 0.34, 0.43))
+	_make_building(Vector3(-4, 0, -53), Vector3(18, 12, 12), Color(0.39, 0.34, 0.30))
+	_make_building(Vector3(24, 0, -54), Vector3(15, 17, 13), Color(0.28, 0.35, 0.39))
 	_make_box("Garage floor", Vector3(7, 0.04, -1), Vector3(12, 0.12, 9), Color(0.13, 0.15, 0.18), self)
+	for tree_pos in [Vector3(-10, 0, 7), Vector3(-14, 0, -7), Vector3(14, 0, 7), Vector3(34, 0, -8), Vector3(-34, 0, -8), Vector3(8, 0, -43), Vector3(-8, 0, -43)]:
+		_make_tree(tree_pos)
+	for lamp_pos in [Vector3(-12, 0, 11), Vector3(12, 0, 11), Vector3(-12, 0, 19), Vector3(12, 0, 19), Vector3(31, 0, -12), Vector3(-31, 0, -12)]:
+		_make_streetlight(lamp_pos)
+
+func _make_tree(pos: Vector3) -> void:
+	var trunk := MeshInstance3D.new()
+	var trunk_mesh := CylinderMesh.new()
+	trunk_mesh.top_radius = 0.18
+	trunk_mesh.bottom_radius = 0.25
+	trunk_mesh.height = 1.8
+	trunk.mesh = trunk_mesh
+	trunk.position = pos + Vector3(0, 0.9, 0)
+	trunk.material_override = _material(Color(0.24, 0.15, 0.09))
+	add_child(trunk)
+	var crown := MeshInstance3D.new()
+	var crown_mesh := SphereMesh.new()
+	crown_mesh.radius = 1.15
+	crown_mesh.height = 2.1
+	crown.mesh = crown_mesh
+	crown.position = pos + Vector3(0, 2.35, 0)
+	crown.material_override = _material(Color(0.12, 0.29, 0.19))
+	add_child(crown)
+
+func _make_streetlight(pos: Vector3) -> void:
+	_make_box("Streetlight pole", pos + Vector3(0, 3.0, 0), Vector3(0.12, 6.0, 0.12), Color(0.12, 0.14, 0.17), self)
+	_make_box("Streetlight arm", pos + Vector3(0.55, 5.8, 0), Vector3(1.2, 0.1, 0.1), Color(0.12, 0.14, 0.17), self)
+	_make_box("Streetlight lamp", pos + Vector3(1.05, 5.7, 0), Vector3(0.55, 0.16, 0.45), Color(0.95, 0.78, 0.45), self)
 
 func _make_building(pos: Vector3, size: Vector3, color: Color) -> void:
 	_make_static_box("City building", pos + Vector3(0, size.y / 2.0, 0), size, color)
@@ -188,6 +236,78 @@ func _build_car() -> void:
 			car.add_child(wheel)
 	add_child(car)
 
+func _build_story_characters() -> void:
+	marcus = Node3D.new()
+	marcus.name = "Marcus Vale"
+	marcus.position = Vector3(28, 0, -30)
+	var body := MeshInstance3D.new()
+	var body_mesh := CapsuleMesh.new()
+	body_mesh.radius = 0.42
+	body_mesh.height = 1.85
+	body.mesh = body_mesh
+	body.position.y = 0.92
+	body.material_override = _material(Color(0.18, 0.20, 0.23))
+	marcus.add_child(body)
+	var head := MeshInstance3D.new()
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.24
+	head_mesh.height = 0.48
+	head.mesh = head_mesh
+	head.position.y = 1.95
+	head.material_override = _material(Color(0.68, 0.48, 0.36))
+	marcus.add_child(head)
+	var name_tag := Label3D.new()
+	name_tag.text = "MARCUS VALE"
+	name_tag.font_size = 32
+	name_tag.position.y = 2.65
+	name_tag.pixel_size = 0.012
+	name_tag.modulate = Color(1.0, 0.82, 0.48)
+	marcus.add_child(name_tag)
+	add_child(marcus)
+
+	package_crate = Node3D.new()
+	package_crate.name = "Sealed package"
+	package_crate.position = Vector3(-30, 0, -25)
+	var crate := MeshInstance3D.new()
+	var crate_mesh := BoxMesh.new()
+	crate_mesh.size = Vector3(1.5, 1.1, 1.5)
+	crate.mesh = crate_mesh
+	crate.position.y = 0.55
+	crate.material_override = _material(Color(0.43, 0.29, 0.16))
+	package_crate.add_child(crate)
+	var stripe := MeshInstance3D.new()
+	var stripe_mesh := BoxMesh.new()
+	stripe_mesh.size = Vector3(1.52, 0.12, 1.52)
+	stripe.mesh = stripe_mesh
+	stripe.position.y = 0.62
+	stripe.material_override = _material(Color(0.83, 0.65, 0.31))
+	package_crate.add_child(stripe)
+	package_crate.visible = false
+	add_child(package_crate)
+
+func _build_mission_marker() -> void:
+	mission_marker = Node3D.new()
+	mission_marker.name = "MissionWaypoint"
+	var beam := MeshInstance3D.new()
+	var beam_mesh := CylinderMesh.new()
+	beam_mesh.top_radius = 0.08
+	beam_mesh.bottom_radius = 0.55
+	beam_mesh.height = 2.4
+	beam.mesh = beam_mesh
+	beam.position.y = 1.2
+	beam.material_override = _material(Color(1.0, 0.72, 0.18, 0.48))
+	mission_marker.add_child(beam)
+	var ring := MeshInstance3D.new()
+	var ring_mesh := TorusMesh.new()
+	ring_mesh.inner_radius = 0.65
+	ring_mesh.outer_radius = 0.82
+	ring.mesh = ring_mesh
+	ring.position.y = 0.12
+	ring.material_override = _material(Color(1.0, 0.78, 0.24))
+	mission_marker.add_child(ring)
+	add_child(mission_marker)
+	_update_mission_marker()
+
 func _build_camera() -> void:
 	camera = Camera3D.new()
 	camera.name = "FollowCamera"
@@ -259,6 +379,18 @@ func _process(delta: float) -> void:
 		message_timer -= delta
 		if message_timer <= 0.0:
 			message.text = ""
+	if is_instance_valid(mission_marker):
+		mission_marker.rotation.y += delta * 0.9
+		mission_marker.position.y = 0.12 + sin(Time.get_ticks_msec() * 0.002) * 0.12
+	day_clock = fmod(day_clock + delta * 0.004, 24.0)
+	if is_instance_valid(sun_light):
+		var daylight := clampf(sin((day_clock - 6.0) / 12.0 * PI), 0.12, 1.0)
+		sun_light.light_energy = 0.18 + daylight * 1.15
+		sun_light.rotation_degrees.x = -((day_clock - 6.0) / 12.0 * 180.0)
+	save_timer += delta
+	if save_timer >= 30.0:
+		save_timer = 0.0
+		_save_game()
 	_follow_camera(delta)
 
 func _physics_process(delta: float) -> void:
@@ -333,35 +465,128 @@ func _interact() -> void:
 		in_car = false
 		player.global_position = car.global_position + car.global_transform.basis.x * 2.2 + Vector3(0, 0.2, 0)
 		player.visible = true
-		_show_message("You stepped out of the car. The city is waiting.")
+		_show_message("You stepped out. Westbridge is yours to explore.")
 		_update_hud()
 		return
 
 	var player_pos := player.global_position
-	if player_pos.distance_to(car.global_position) < 4.0 and first_deal_done:
+	if player_pos.distance_to(car.global_position) < 4.5 and mission_stage >= 1:
 		in_car = true
 		player.visible = false
-		_show_message("TEST DRIVE STARTED — Use the arrows to steer. ▲ accelerates, ▼ reverses.")
+		_show_message("TEST DRIVE — ▲ accelerate, ▼ brake/reverse, ◀ ▶ steer. Hold RUN for a faster drive.")
 		_update_hud()
 		return
 
 	var desk_pos := Vector3(0, 0, -1.2)
-	if not first_deal_done and player_pos.distance_to(desk_pos) < 5.0:
-		first_deal_done = true
-		_show_message("A folder is waiting on the desk. One name is circled: MARCUS VALE. Your father's old business partner. Why is his number here?")
+	if player_pos.distance_to(desk_pos) < 4.5:
+		if mission_stage == 0:
+			mission_stage = 1
+			first_deal_done = true
+			_show_message("The folder contains an old ledger and a note: 'Ask Marcus what happened to your father.' His last known location is the old freight yard.")
+		elif mission_stage == 3:
+			mission_stage = 4
+			cash += 2500
+			sales_completed += 1
+			_show_message("CHAPTER 1 COMPLETE. You returned with the ledger. The numbers reveal your father was paying someone to keep the dealership alive. +$2,500.")
+		elif mission_stage >= 4:
+			if not stock_owned and cash >= 1200:
+				cash -= 1200
+				stock_owned = true
+				_show_message("You bought a trade-in for $1,200. Clean it up and list it — interact with the desk again to close the sale.")
+			elif stock_owned:
+				cash += 1950
+				stock_owned = false
+				sales_completed += 1
+				_show_message("SALE CLOSED: the car sold for $1,950. Your dealership made $750 profit.")
+			else:
+				_show_message("You need $1,200 to buy your next trade-in. Take a drive and come back.")
+		else:
+			_show_message("The reception desk is quiet. Your next lead is marked on the map.")
+		_update_mission_marker()
 		_update_hud()
-	elif player_pos.distance_to(car.global_position) < 4.0:
-		_show_message("The car is ready, but check the dealership desk first.")
+		_save_game()
+		return
+
+	if mission_stage == 1 and is_instance_valid(marcus) and player_pos.distance_to(marcus.global_position) < 3.5:
+		mission_stage = 2
+		package_crate.visible = true
+		marcus.visible = false
+		_show_message("MARCUS: 'Your father didn't disappear. He found something in the freight records.' He gives you a warehouse key. Retrieve the sealed package before the yard crew arrives.")
+		_update_mission_marker()
+		_update_hud()
+		_save_game()
+		return
+
+	if mission_stage == 2 and is_instance_valid(package_crate) and player_pos.distance_to(package_crate.global_position) < 3.5:
+		mission_stage = 3
+		package_crate.visible = false
+		cash += 750
+		_show_message("PACKAGE SECURED. Inside: a ledger page and a photograph of your father with Marcus. +$750. Return to Westbridge Motors.")
+		_update_mission_marker()
+		_update_hud()
+		_save_game()
+		return
+
+	if player_pos.distance_to(car.global_position) < 4.5:
+		_show_message("The keys are on the reception desk. Find the folder first.")
+	elif mission_stage == 1 and is_instance_valid(marcus):
+		_show_message("Find Marcus at the old freight yard. Follow the gold waypoint.")
+	elif mission_stage == 2 and is_instance_valid(package_crate):
+		_show_message("The sealed package is inside the warehouse yard. Follow the gold waypoint.")
 	else:
-		_show_message("Nothing to interact with here. Explore the showroom.")
+		_show_message("No interaction nearby. Follow the gold waypoint or explore Westbridge.")
 
 func _show_message(text_value: String) -> void:
 	message.text = text_value
 	message_timer = 9.0
 
+func _update_mission_marker() -> void:
+	if not is_instance_valid(mission_marker):
+		return
+	match mission_stage:
+		0, 3:
+			mission_marker.global_position = Vector3(0, 0.12, -1.2)
+		1:
+			mission_marker.global_position = Vector3(28, 0.12, -30)
+		2:
+			mission_marker.global_position = Vector3(-30, 0.12, -25)
+		_:
+			mission_marker.visible = false
+			return
+	mission_marker.visible = true
+
+func _save_game() -> void:
+	var data := ConfigFile.new()
+	data.set_value("career", "mission_stage", mission_stage)
+	data.set_value("career", "cash", cash)
+	data.set_value("career", "sales_completed", sales_completed)
+	data.set_value("career", "stock_owned", stock_owned)
+	data.save("user://underworld_save.cfg")
+
+func _load_game() -> void:
+	var data := ConfigFile.new()
+	if data.load("user://underworld_save.cfg") == OK:
+		mission_stage = int(data.get_value("career", "mission_stage", 0))
+		cash = int(data.get_value("career", "cash", 2450))
+		sales_completed = int(data.get_value("career", "sales_completed", 0))
+		stock_owned = bool(data.get_value("career", "stock_owned", false))
+	first_deal_done = mission_stage >= 1
+	if mission_stage >= 2 and is_instance_valid(marcus):
+		marcus.visible = false
+	if mission_stage >= 3 and is_instance_valid(package_crate):
+		package_crate.visible = false
+	_update_mission_marker()
+
 func _update_hud() -> void:
-	hud.text = "WESTBRIDGE MOTORS     $2,450"
-	if not first_deal_done:
-		objective.text = "MISSION 01  |  Find the folder on the reception desk."
-	else:
-		objective.text = "MISSION 01 COMPLETE  |  Get into your first car and take a test drive."
+	hud.text = "WESTBRIDGE MOTORS     $%s     |     SALES %s" % [str(cash), str(sales_completed)]
+	match mission_stage:
+		0:
+			objective.text = "MISSION 01  |  Find the folder on the reception desk."
+		1:
+			objective.text = "MISSION 01  |  Meet Marcus Vale at the old freight yard."
+		2:
+			objective.text = "MISSION 01  |  Retrieve the sealed package from the warehouse."
+		3:
+			objective.text = "MISSION 01  |  Return to Westbridge Motors with the package."
+		_:
+			objective.text = "WESTBRIDGE MOTORS  |  Buy trade-ins for $1,200 and sell for $1,950. Build your business."
