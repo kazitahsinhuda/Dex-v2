@@ -22,10 +22,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Prepare Godot Android environment
+        run: |
+          mkdir -p "$HOME/.config" "$HOME/.local/share/godot/export_templates"
+          cp -a /root/.config/godot "$HOME/.config/godot"
+          cp -a /root/.local/share/godot/export_templates/4.3.stable "$HOME/.local/share/godot/export_templates/4.3.stable"
+          echo "HOME=$HOME"
+          echo "Godot settings:"
+          cat "$HOME/.config/godot/editor_settings-4.3.tres"
+          echo "Android template files:"
+          ls -lah "$HOME/.local/share/godot/export_templates/4.3.stable"
+
+      - name: Import project
+        working-directory: underworld-inc
+        run: godot --headless --editor --path . --quit
+
       - name: Export debug APK
         working-directory: underworld-inc
-        env:
-          HOME: /root
         run: |
           mkdir -p build
           godot --headless --verbose --path . --export-debug Android build/underworld-inc.apk
