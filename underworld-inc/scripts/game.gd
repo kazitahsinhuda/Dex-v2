@@ -376,6 +376,7 @@ func _build_police_car() -> void:
 	roof.material_override = _material(Color(0.12, 0.18, 0.25))
 	police_car.add_child(roof)
 	var lightbar := MeshInstance3D.new()
+	lightbar.name = "Lightbar"
 	var lightbar_mesh := BoxMesh.new()
 	lightbar_mesh.size = Vector3(1.05, 0.18, 0.28)
 	lightbar.mesh = lightbar_mesh
@@ -392,7 +393,7 @@ func _update_police(delta: float) -> void:
 	police_flash_timer += delta
 	if police_flash_timer >= 0.35:
 		police_flash_timer = 0.0
-		var bar := police_car.get_node_or_null("MeshInstance3D") as MeshInstance3D
+		var bar := police_car.get_node_or_null("Lightbar") as MeshInstance3D
 		if bar:
 			bar.material_override = _material(Color(0.12, 0.28, 0.95) if int(Time.get_ticks_msec() / 350) % 2 == 0 else Color(0.95, 0.08, 0.06))
 	var target: Node3D = car if in_car else player
