@@ -576,10 +576,14 @@ func _add_touch_button(root: Control, caption: String, action: String, pos: Vect
 	button.position = pos
 	button.add_theme_font_size_override("font_size", 17 if right_side else 24)
 	button.modulate = Color(1, 1, 1, 0.88)
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	root.add_child(button)
-	# Touch input is handled centrally in _input(). Godot's mouse-emulated
-	# Button signals can drop simultaneous Android touches, so these are visual only.
-	button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Native GUI button events keep movement active while another finger presses INTERACT.
+	if action == "interact":
+		button.pressed.connect(_interact)
+	else:
+		button.button_down.connect(func(): held[action] = true)
+		button.button_up.connect(func(): held[action] = false)
 
 func _input(event: InputEvent) -> void:
 	var view_size := get_viewport().get_visible_rect().size
@@ -588,12 +592,9 @@ func _input(event: InputEvent) -> void:
 		if touch.pressed:
 			touch_points[touch.index] = touch.position
 			touch_last[touch.index] = touch.position
-			if touch.position.x > view_size.x - 310.0 and touch.position.y > view_size.y - 205.0 and touch.position.y < view_size.y - 85.0:
-				_interact()
 		else:
 			touch_points.erase(touch.index)
 			touch_last.erase(touch.index)
-		_update_touch_controls(view_size)
 	elif event is InputEventScreenDrag:
 		var drag := event as InputEventScreenDrag
 		if touch_points.has(drag.index):
@@ -605,26 +606,9 @@ func _input(event: InputEvent) -> void:
 			touch_last[drag.index] = drag.position
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		# Also allow desktop testing with a click on the visible INTERACT area.
-		var p := event.position
+		var p: Vector2 = event.position
 		if p.x > view_size.x - 310.0 and p.y > view_size.y - 205.0 and p.y < view_size.y - 85.0:
 			_interact()
-
-func _update_touch_controls(view_size: Vector2) -> void:
-	for action in ["forward", "back", "left", "right", "run"]:
-		held[action] = false
-	for point in touch_points.values():
-		var p: Vector2 = point
-		# Match the four visible D-pad button rectangles exactly.
-		if p.x >= 88.0 and p.x <= 150.0 and p.y >= view_size.y - 190.0 and p.y <= view_size.y - 132.0:
-			held["forward"] = true
-		elif p.x >= 24.0 and p.x <= 86.0 and p.y >= view_size.y - 126.0 and p.y <= view_size.y - 68.0:
-			held["left"] = true
-		elif p.x >= 88.0 and p.x <= 150.0 and p.y >= view_size.y - 126.0 and p.y <= view_size.y - 68.0:
-			held["back"] = true
-		elif p.x >= 152.0 and p.x <= 214.0 and p.y >= view_size.y - 126.0 and p.y <= view_size.y - 68.0:
-			held["right"] = true
-		if p.x > view_size.x - 310.0 and p.y > view_size.y - 90.0:
-			held["run"] = true
 
 func _process(delta: float) -> void:
 	if message_timer > 0.0:
