@@ -36,6 +36,33 @@ func _run_tests() -> void:
 	game._update_mission_marker()
 	game._update_hud()
 
+	if not _check(game.parked_cars.size() >= 4, "Street vehicles should be enterable CharacterBody3D cars."):
+		return
+	if not _check(game._world_material("Main road", Color(0.07, 0.08, 0.1)).albedo_texture != null, "Roads should use generated surface textures."):
+		return
+	game._set_intro_scene(0)
+	if not _check(is_equal_approx(game.player.global_position.x, 130.0), "Opening should begin in the office, not the showroom."):
+		return
+	game._set_intro_scene(2)
+	if not _check(is_equal_approx(game.player.global_position.x, 150.0), "Opening should move to Alex's apartment."):
+		return
+	game._set_intro_scene(4)
+	if not _check(is_equal_approx(game.player.global_position.x, 170.0), "Opening should move to the bus stop."):
+		return
+	game._set_intro_scene(5)
+	if not _check(is_equal_approx(game.player.global_position.x, 0.0), "Opening should finish outside Westbridge Motors."):
+		return
+
+	# Test entering and exiting a parked street vehicle.
+	var test_vehicle: CharacterBody3D = game.parked_cars[0]
+	game.player.global_position = test_vehicle.global_position + Vector3(0, 0.2, 2.0)
+	game._interact()
+	if not _check(game.in_car and game.active_car == test_vehicle, "Player should enter a parked car."):
+		return
+	game._interact()
+	if not _check(not game.in_car and game.player.visible, "Player should be able to exit a parked car."):
+		return
+
 	game.player.global_position = Vector3(0, 1, -1.2)
 	game._interact()
 	if not _check(game.mission_stage == 1, "Desk interaction should start the story."):
