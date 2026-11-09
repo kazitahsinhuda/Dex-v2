@@ -35,6 +35,10 @@ var story_message := "WESTBRIDGE, 8:12 AM — Your father's old dealership is fi
 var message_timer := 7.0
 var intro_active := false
 var intro_index := 0
+var touch_points: Dictionary = {}
+var touch_last: Dictionary = {}
+var camera_yaw := 0.0
+var camera_pitch := 0.0
 var intro_lines: Array[String] = [
 	"Alex Carter. 7:40 AM. Another shift, another empty promise.",
 	"MANAGER: You're fired, Alex. The company is cutting staff. Clear your locker.",
@@ -573,11 +577,54 @@ func _add_touch_button(root: Control, caption: String, action: String, pos: Vect
 	button.add_theme_font_size_override("font_size", 17 if right_side else 24)
 	button.modulate = Color(1, 1, 1, 0.88)
 	root.add_child(button)
-	if action == "interact":
-		button.button_down.connect(_interact)
-	else:
-		button.button_down.connect(func(): held[action] = true)
-		button.button_up.connect(func(): held[action] = false)
+	# Touch input is handled centrally in _input(). Godot's mouse-emulated
+	# Button signals can drop simultaneous Android touches, so these are visual only.
+	button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+func _input(event: InputEvent) -> void:
+	var view_size := get_viewport().get_visible_rect().size
+	if event is InputEventScreenTouch:
+		var touch := event as InputEventScreenTouch
+		if touch.pressed:
+			touch_points[touch.index] = touch.position
+			touch_last[touch.index] = touch.position
+			if touch.position.x > view_size.x - 310.0 and touch.position.y > view_size.y - 205.0 and touch.position.y < view_size.y - 85.0:
+				_interact()
+		else:
+			touch_points.erase(touch.index)
+			touch_last.erase(touch.index)
+		_update_touch_controls(view_size)
+	elif event is InputEventScreenDrag:
+		var drag := event as InputEventScreenDrag
+		if touch_points.has(drag.index):
+			var previous: Vector2 = touch_last.get(drag.index, drag.position)
+			var origin: Vector2 = touch_points[drag.index]
+			if origin.x > view_size.x * 0.42 and origin.y < view_size.y - 225.0:
+				camera_yaw -= (drag.position.x - previous.x) * 0.008
+				camera_pitch = clampf(camera_pitch + (drag.position.y - previous.y) * 0.004, -0.18, 0.55)
+			touch_last[drag.index] = drag.position
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		# Also allow desktop testing with a click on the visible INTERACT area.
+		var p := event.position
+		if p.x > view_size.x - 310.0 and p.y > view_size.y - 205.0 and p.y < view_size.y - 85.0:
+			_interact()
+
+func _update_touch_controls(view_size: Vector2) -> void:
+	for action in ["forward", "back", "left", "right", "run"]:
+		held[action] = false
+	for point in touch_points.values():
+		var p: Vector2 = point
+		if p.x < 250.0 and p.y > view_size.y - 245.0:
+			if p.y < view_size.y - 165.0:
+				held["forward"] = true
+			elif p.y > view_size.y - 105.0:
+				held["back"] = true
+			elif p.x < 85.0:
+				held["left"] = true
+			elif p.x > 165.0:
+				held["right"] = true
+		if p.x > view_size.x - 310.0 and p.y > view_size.y - 90.0:
+			held["run"] = true
 
 func _process(delta: float) -> void:
 	if message_timer > 0.0:
@@ -677,7 +724,8 @@ func _follow_camera(delta: float) -> void:
 	var height := 4.0 if in_car else 3.4
 	# Keep the third-person camera behind the player without orbiting when
 	# the player turns. This prevents the arrow buttons from spinning the view.
-	var desired := target.global_position + Vector3(0, height, distance)
+	var horizontal := Vector3(sin(camera_yaw) * distance, 0.0, cos(camera_yaw) * distance)
+	var desired := target.global_position + horizontal + Vector3(0, height + camera_pitch * 3.0, 0)
 	camera.global_position = camera.global_position.lerp(desired, clamp(delta * 5.0, 0.0, 1.0))
 	camera.look_at(target.global_position + Vector3(0, 1.1, 0))
 
