@@ -160,7 +160,7 @@ func _make_parked_car(pos: Vector3, paint: Color, facing: float) -> void:
 	collision.shape = collision_shape
 	vehicle.add_child(collision)
 	vehicle.rotation.y = facing
-	_build_car_visual(vehicle, paint, false)
+	_build_car_visual(vehicle, paint)
 	add_child(vehicle)
 	parked_cars.append(vehicle)
 
@@ -399,10 +399,10 @@ func _build_car() -> void:
 	collision.shape = shape
 	car.add_child(collision)
 
-	_build_car_visual(car, Color(0.12, 0.19, 0.28), true)
+	_build_car_visual(car, Color(0.12, 0.19, 0.28))
 	add_child(car)
 
-func _build_car_visual(vehicle: CharacterBody3D, paint: Color, starter: bool) -> void:
+func _build_car_visual(vehicle: CharacterBody3D, paint: Color) -> void:
 	# Rounded ellipsoid body panels replace the old rectangular toy-car silhouette.
 	var body := MeshInstance3D.new()
 	var body_mesh := SphereMesh.new()
@@ -444,7 +444,19 @@ func _build_car_visual(vehicle: CharacterBody3D, paint: Color, starter: bool) ->
 	cabin.material_override = _material(Color(0.035, 0.075, 0.105))
 	vehicle.add_child(cabin)
 
-	# Front and rear glass, mirrors, bumpers and lamps.
+	# Curved front/rear windscreens and side windows give the cabin a glass canopy.
+	for z_pos in [-0.77, 0.64]:
+		var windshield := MeshInstance3D.new()
+		var windshield_mesh := SphereMesh.new()
+		windshield_mesh.radius = 1.0
+		windshield_mesh.height = 2.0
+		windshield.mesh = windshield_mesh
+		windshield.scale = Vector3(0.54, 0.27, 0.055)
+		windshield.position = Vector3(0, 0.76, z_pos)
+		windshield.material_override = _material(Color(0.12, 0.25, 0.31, 0.86))
+		vehicle.add_child(windshield)
+
+	# Side windows, mirrors, wheels, bumpers and lamps.
 	for side in [-1.0, 1.0]:
 		var window := MeshInstance3D.new()
 		var window_mesh := SphereMesh.new()
@@ -760,7 +772,6 @@ func _build_prologue_stage() -> void:
 	_make_box("Apartment bed base", Vector3(147, 0.38, -1), Vector3(3.4, 0.65, 2.8), Color(0.17, 0.19, 0.22), self)
 	_make_box("Apartment mattress", Vector3(147, 0.78, -1), Vector3(3.3, 0.22, 2.7), Color(0.70, 0.68, 0.60), self)
 	_make_box("Apartment table", Vector3(153, 0.62, -2), Vector3(1.5, 1.1, 1.0), Color(0.24, 0.16, 0.10), self)
-	_make_box("Inheritance letter", Vector3(153, 1.2, -2), Vector3(0.65, 0.035, 0.45), Color(0.91, 0.82, 0.61), self)
 	_make_box("Apartment window", Vector3(150, 2.3, -5.82), Vector3(3.5, 1.8, 0.08), Color(0.12, 0.24, 0.31), self)
 
 	_make_static_box("Bus stop platform", Vector3(170, -0.1, 0), Vector3(16, 0.2, 10), Color(0.30, 0.31, 0.30))
