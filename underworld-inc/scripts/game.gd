@@ -16,6 +16,7 @@ var objective: Label
 var message: Label
 var minimap_player: ColorRect
 var minimap_target: ColorRect
+var minimap_alt_target: ColorRect
 var minimap_panel: ColorRect
 var held: Dictionary = {}
 var in_car := false
@@ -665,6 +666,10 @@ func _build_minimap(root: Control) -> void:
 	minimap_target.size = Vector2(9, 9)
 	minimap_target.color = Color(1.0, 0.72, 0.18)
 	minimap_panel.add_child(minimap_target)
+	minimap_alt_target = ColorRect.new()
+	minimap_alt_target.size = Vector2(9, 9)
+	minimap_alt_target.color = Color(0.95, 0.28, 0.22)
+	minimap_panel.add_child(minimap_alt_target)
 	minimap_player = ColorRect.new()
 	minimap_player.size = Vector2(8, 8)
 	minimap_player.color = Color(0.28, 0.9, 0.62)
@@ -685,6 +690,13 @@ func _update_minimap() -> void:
 		minimap_target.position = Vector2(
 			clampf(5.0 + (target_pos.x + 50.0) * 1.8, 5.0, 176.0),
 			clampf(20.0 + (target_pos.z + 60.0) * 1.3, 20.0, 132.0)
+		)
+	minimap_alt_target.visible = mission_stage == 11 and is_instance_valid(marcus) and marcus.visible
+	if minimap_alt_target.visible:
+		var alternate_pos: Vector3 = marcus.global_position
+		minimap_alt_target.position = Vector2(
+			clampf(5.0 + (alternate_pos.x + 50.0) * 1.8, 5.0, 176.0),
+			clampf(20.0 + (alternate_pos.z + 60.0) * 1.3, 20.0, 132.0)
 		)
 
 func _add_touch_button(root: Control, caption: String, action: String, pos: Vector2, right_side: bool) -> void:
