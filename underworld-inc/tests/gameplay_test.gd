@@ -18,6 +18,13 @@ func _run_tests() -> void:
 	root.add_child(game)
 	await process_frame
 
+	# Alex's root sits on the ground; the capsule is offset upward around the body.
+	var player_collision := game.player.get_node("CollisionShape3D") as CollisionShape3D
+	if not _check(is_equal_approx(game.player.position.y, 0.0) and is_equal_approx(player_collision.position.y, 0.9), "Player collision and root must be aligned to ground level."):
+		return
+	if not _check(game.player_visual.mesh is CapsuleMesh, "Player torso must use a rounded character mesh, not a box placeholder."):
+		return
+
 	# A save from the earlier prototype must not bypass the new story opening.
 	var legacy_save := ConfigFile.new()
 	legacy_save.set_value("career", "mission_stage", 6)
