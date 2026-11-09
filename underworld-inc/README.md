@@ -2,32 +2,29 @@
 
 A 3D, story-driven dealership and underworld simulator for Android, built with Godot 4.3.
 
-## Current playable chapter
+## Campaign
 
-- Explore the Westbridge Motors dealership and an expanded city district.
-- Third-person character movement with mobile touch controls and a fixed follow camera.
-- Enter and drive the starter car; use touch controls to accelerate, reverse and steer.
-- Story mission: discover the folder, meet Marcus Vale at the freight yard, retrieve the sealed package, and return to the dealership.
-- Career economy: start with $2,450, buy trade-ins for $1,200 and sell them for $1,950.
-- Daylight cycle and environmental details including streetlights, trees, parked cars and pedestrians.
-- Automatic career save for mission progress, cash, and dealership stock.
+- Opening prologue: Alex loses his job, falls behind on rent, receives the inheritance letter, and arrives in Westbridge.
+- Chapter 1: investigate the abandoned dealership, meet Marcus Vale, recover the freight-yard package, and escape a police pursuit.
+- Dealership career: buy trade-ins for $1,200 and sell for $1,950. Two additional profitable sales unlock the next story chapter.
+- Chapter 2: work with mechanic Lena Ortiz, recover the service file from a storage yard, and escape a second police pursuit.
+- Chapter 3: confront Marcus, recover the original records-depot ledger, and return to the dealership for the campaign finale.
+- Post-campaign free play: continue buying and selling trade-ins and grow the dealership.
 
-## Mobile controls
+## World and controls
 
-- D-pad: move on foot.
-- RUN: sprint on foot.
-- INTERACT: inspect story locations, enter/exit the car, and operate the dealership.
-- In the car: ▲ accelerate, ▼ reverse/brake, ◀ ▶ steer.
+- Explore Westbridge on foot in third person.
+- Enter and drive the starter car; accelerate, reverse, and steer with the on-screen D-pad.
+- Hold the D-pad buttons to move; hold RUN to sprint.
+- INTERACT advances the prologue, talks to characters, collects mission evidence, and operates the dealership.
+- Drag on the open right side of the screen to orbit the camera.
+- Device text-to-speech reads story messages when an Android voice is available.
+- Career progress, cash, stock, and mission stage save automatically.
 
 ## Build and validation
 
 Godot 4.3, Compatibility renderer, Android arm64-v8a.
 
-The GitHub Actions workflow:
-1. Imports the project.
-2. Runs a headless gameplay smoke test.
-3. Exports a signed debug APK.
-4. Verifies APK signature, package ID, app label, and archive integrity.
-5. Uploads the APK as `underworld-inc-android-signed`.
+The GitHub Actions workflow imports the project, runs a headless gameplay smoke test, runs campaign and dealership progression assertions, exports a signed debug APK, and verifies its signature, package ID, app label, and archive integrity.
 
-The current target is a complete, stable first playable chapter. Visuals are built from original Godot primitives and are being improved iteratively; this is not yet a finished commercial-quality release.
+Visuals currently use original Godot primitives and low-poly geometry. Device runtime, touch behavior, and the quality/availability of installed Android voices still require real-phone validation; a successful CI build does not prove those device behaviors.
