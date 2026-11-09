@@ -23,6 +23,8 @@ var sales_completed := 0
 var stock_owned := false
 var marcus: Node3D
 var package_crate: Node3D
+var lena: Node3D
+var evidence_case: Node3D
 var mission_marker: Node3D
 var police_car: CharacterBody3D
 var police_active := false
@@ -494,6 +496,59 @@ func _build_story_characters() -> void:
 	package_crate.visible = false
 	add_child(package_crate)
 
+	lena = _make_story_npc("Lena Ortiz", Vector3(8, 0, -1), Color(0.16, 0.34, 0.30))
+	lena.visible = false
+
+	evidence_case = Node3D.new()
+	evidence_case.name = "Father Evidence Case"
+	evidence_case.position = Vector3(38, 0, -30)
+	var case_mesh := MeshInstance3D.new()
+	var case_box := BoxMesh.new()
+	case_box.size = Vector3(1.0, 0.7, 0.65)
+	case_mesh.mesh = case_box
+	case_mesh.position.y = 0.38
+	case_mesh.material_override = _material(Color(0.12, 0.13, 0.15))
+	evidence_case.add_child(case_mesh)
+	var latch := MeshInstance3D.new()
+	var latch_box := BoxMesh.new()
+	latch_box.size = Vector3(0.22, 0.16, 0.05)
+	latch.mesh = latch_box
+	latch.position = Vector3(0, 0.4, -0.34)
+	latch.material_override = _material(Color(0.78, 0.58, 0.22))
+	evidence_case.add_child(latch)
+	evidence_case.visible = false
+	add_child(evidence_case)
+
+func _make_story_npc(person_name: String, pos: Vector3, clothing: Color) -> Node3D:
+	var person := Node3D.new()
+	person.name = person_name
+	person.position = pos
+	var body := MeshInstance3D.new()
+	var body_mesh := CapsuleMesh.new()
+	body_mesh.radius = 0.38
+	body_mesh.height = 1.75
+	body.mesh = body_mesh
+	body.position.y = 0.88
+	body.material_override = _material(clothing)
+	person.add_child(body)
+	var head := MeshInstance3D.new()
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.23
+	head_mesh.height = 0.46
+	head.mesh = head_mesh
+	head.position.y = 1.88
+	head.material_override = _material(Color(0.68, 0.49, 0.37))
+	person.add_child(head)
+	var tag := Label3D.new()
+	tag.text = person_name.to_upper()
+	tag.font_size = 28
+	tag.position.y = 2.5
+	tag.pixel_size = 0.012
+	tag.modulate = Color(1.0, 0.84, 0.58)
+	person.add_child(tag)
+	add_child(person)
+	return person
+
 func _build_mission_marker() -> void:
 	mission_marker = Node3D.new()
 	mission_marker.name = "MissionWaypoint"
@@ -770,6 +825,15 @@ func _interact() -> void:
 			cash += 2500
 			sales_completed += 1
 			_show_message("CHAPTER 1 COMPLETE. You returned with the ledger. The numbers reveal your father was paying someone to keep the dealership alive. +$2,500.")
+		elif mission_stage == 7:
+			mission_stage = 8
+			marcus.visible = true
+			_show_message("The service file points back to Marcus. He has agreed to meet you at the freight yard. This time, get the truth.")
+		elif mission_stage == 10:
+			mission_stage = 11
+			cash += 5000
+			sales_completed += 1
+			_show_message("CAMPAIGN COMPLETE. The final ledger proves your father left Westbridge to keep you out of Vale's operation. You now control the dealership — and the choices that come with it. +$5,000.")
 		elif mission_stage >= 4:
 			if not stock_owned and cash >= 1200:
 				cash -= 1200
@@ -782,6 +846,10 @@ func _interact() -> void:
 				_show_message("SALE CLOSED: the car sold for $1,950. Your dealership made $750 profit.")
 			else:
 				_show_message("You need $1,200 to buy your next trade-in. Take a drive and come back.")
+			if mission_stage == 4 and sales_completed >= 3:
+				mission_stage = 5
+				lena.visible = true
+				_show_message("CHAPTER 2 — THE DEBT. Two profitable sales have kept the doors open. Lena Ortiz found a suspicious VIN in the old service records. Talk to her in the garage.")
 		else:
 			_show_message("The reception desk is quiet. Your next lead is marked on the map.")
 		_update_mission_marker()
@@ -794,6 +862,50 @@ func _interact() -> void:
 		package_crate.visible = true
 		marcus.visible = false
 		_show_message("MARCUS: 'Your father didn't disappear. He found something in the freight records.' He gives you a warehouse key. Retrieve the sealed package before the yard crew arrives.")
+		_update_mission_marker()
+		_update_hud()
+		_save_game()
+		return
+
+	if mission_stage == 5 and is_instance_valid(lena) and player_pos.distance_to(lena.global_position) < 3.5:
+		mission_stage = 6
+		lena.visible = false
+		evidence_case.visible = true
+		_show_message("LENA: 'This VIN belongs to a car your father hid before he vanished. The police impounded it, but the storage yard clerk kept the original service file. Bring it back before the file disappears.'")
+		_update_mission_marker()
+		_update_hud()
+		_save_game()
+		return
+
+	if mission_stage == 6 and is_instance_valid(evidence_case) and player_pos.distance_to(evidence_case.global_position) < 3.5:
+		mission_stage = 7
+		evidence_case.visible = false
+		cash += 1000
+		police_active = true
+		wanted_timer = 65.0
+		police_car.visible = true
+		police_car.global_position = Vector3(-42, 0.72, 15)
+		_show_message("SERVICE FILE RECOVERED. +$1,000. The yard cameras caught your plate. Lose the cruiser and return to Westbridge Motors.")
+		_update_mission_marker()
+		_update_hud()
+		_save_game()
+		return
+
+	if mission_stage == 8 and is_instance_valid(marcus) and player_pos.distance_to(marcus.global_position) < 3.5:
+		mission_stage = 9
+		marcus.visible = false
+		evidence_case.position = Vector3(-38, 0, -43)
+		evidence_case.visible = true
+		_show_message("MARCUS: 'Your father wasn't stealing cars. He was collecting proof that the port authority was laundering money through fake dealerships. He hid the original ledger in the old records depot.'")
+		_update_mission_marker()
+		_update_hud()
+		_save_game()
+		return
+
+	if mission_stage == 9 and is_instance_valid(evidence_case) and player_pos.distance_to(evidence_case.global_position) < 3.5:
+		mission_stage = 10
+		evidence_case.visible = false
+		_show_message("THE LAST LEDGER. A recording from your father explains why he disappeared — and leaves the future of Westbridge Motors in your hands. Get back to the dealership.")
 		_update_mission_marker()
 		_update_hud()
 		_save_game()
@@ -819,6 +931,16 @@ func _interact() -> void:
 		_show_message("Find Marcus at the old freight yard. Follow the gold waypoint.")
 	elif mission_stage == 2 and is_instance_valid(package_crate):
 		_show_message("The sealed package is inside the warehouse yard. Follow the gold waypoint.")
+	elif mission_stage == 5:
+		_show_message("Talk to Lena Ortiz in the garage.")
+	elif mission_stage == 6:
+		_show_message("Recover the service file from the storage yard.")
+	elif mission_stage == 8:
+		_show_message("Meet Marcus at the old freight yard.")
+	elif mission_stage == 9:
+		_show_message("Find the original ledger at the records depot.")
+	elif mission_stage == 10:
+		_show_message("Return to Westbridge Motors with the final ledger.")
 	else:
 		_show_message("No interaction nearby. Follow the gold waypoint or explore Westbridge.")
 
@@ -831,12 +953,16 @@ func _update_mission_marker() -> void:
 	if not is_instance_valid(mission_marker):
 		return
 	match mission_stage:
-		0, 3:
+		0, 3, 7, 10:
 			mission_marker.global_position = Vector3(0, 0.12, -1.2)
-		1:
+		1, 8:
 			mission_marker.global_position = Vector3(28, 0.12, -30)
 		2:
 			mission_marker.global_position = Vector3(-30, 0.12, -25)
+		5:
+			mission_marker.global_position = Vector3(8, 0.12, -1)
+		6, 9:
+			mission_marker.global_position = evidence_case.global_position + Vector3(0, 0.12, 0)
 		_:
 			mission_marker.visible = false
 			return
@@ -862,6 +988,12 @@ func _load_game() -> void:
 		marcus.visible = false
 	if mission_stage >= 3 and is_instance_valid(package_crate):
 		package_crate.visible = false
+	if mission_stage >= 6 and is_instance_valid(lena):
+		lena.visible = false
+	if mission_stage >= 7 and is_instance_valid(evidence_case):
+		evidence_case.visible = mission_stage == 9
+	if mission_stage >= 9 and is_instance_valid(marcus):
+		marcus.visible = false
 	_update_mission_marker()
 
 func _update_hud() -> void:
@@ -875,7 +1007,21 @@ func _update_hud() -> void:
 			objective.text = "MISSION 01  |  Retrieve the sealed package from the warehouse."
 		3:
 			objective.text = "MISSION 01  |  Return to Westbridge Motors with the package."
+		4:
+			objective.text = "CHAPTER 1 COMPLETE  |  Complete 2 more profitable trade-in sales."
+		5:
+			objective.text = "CHAPTER 2  |  Talk to Lena Ortiz in the garage."
+		6:
+			objective.text = "CHAPTER 2  |  Recover the service file from the storage yard."
+		7:
+			objective.text = "CHAPTER 2  |  Return to Westbridge Motors and review the file."
+		8:
+			objective.text = "CHAPTER 3  |  Meet Marcus Vale at the freight yard."
+		9:
+			objective.text = "CHAPTER 3  |  Retrieve the original ledger from the records depot."
+		10:
+			objective.text = "CHAPTER 3  |  Return to Westbridge Motors with the final ledger."
 		_:
-			objective.text = "WESTBRIDGE MOTORS  |  Buy trade-ins for $1,200 and sell for $1,950. Build your business."
+			objective.text = "CAMPAIGN COMPLETE  |  Run Westbridge Motors, grow your cash, and choose your future."
 	if police_active:
 		objective.text += "     |     HEAT: 1"
