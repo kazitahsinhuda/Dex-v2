@@ -4,7 +4,7 @@ A 3D, story-driven dealership and underworld simulator for Android, built with G
 
 ## Campaign
 
-- Opening prologue: Alex loses his job, falls behind on rent, receives the inheritance letter, and arrives in Westbridge.
+- Opening prologue now moves through separate 3D sets: Alex is fired in the office, returns to his apartment, waits at the bus stop, and arrives outside Westbridge Motors.
 - Chapter 1: investigate the abandoned dealership, meet Marcus Vale, recover the freight-yard package, and escape a police pursuit.
 - Dealership career: buy trade-ins for $1,200 and sell for $1,950. Two additional profitable sales unlock the next story chapter.
 - Chapter 2: work with mechanic Lena Ortiz, recover the service file from a storage yard, and escape a second police pursuit.
@@ -15,6 +15,8 @@ A 3D, story-driven dealership and underworld simulator for Android, built with G
 
 - Explore Westbridge on foot in third person.
 - Live Westbridge minimap shows the player's position, mission waypoint, and both destinations during the final choice.
+- Parked street cars are enterable and drivable; tap INTERACT beside a car to enter and again to exit.
+- Roads, grass, building facades, showroom surfaces, garage concrete, and selected wood/metal surfaces use generated noise textures; vehicle paint has metallic clearcoat.
 - Enter and drive the starter car; accelerate, reverse, and steer with the on-screen D-pad.
 - Hold the D-pad buttons to move; hold RUN to sprint.
 - INTERACT advances the prologue, talks to characters, collects mission evidence, and operates the dealership/workshop.
