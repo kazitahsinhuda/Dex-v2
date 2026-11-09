@@ -614,15 +614,15 @@ func _update_touch_controls(view_size: Vector2) -> void:
 		held[action] = false
 	for point in touch_points.values():
 		var p: Vector2 = point
-		if p.x < 250.0 and p.y > view_size.y - 245.0:
-			if p.y < view_size.y - 165.0:
-				held["forward"] = true
-			elif p.y > view_size.y - 105.0:
-				held["back"] = true
-			elif p.x < 85.0:
-				held["left"] = true
-			elif p.x > 165.0:
-				held["right"] = true
+		# Match the four visible D-pad button rectangles exactly.
+		if p.x >= 88.0 and p.x <= 150.0 and p.y >= view_size.y - 190.0 and p.y <= view_size.y - 132.0:
+			held["forward"] = true
+		elif p.x >= 24.0 and p.x <= 86.0 and p.y >= view_size.y - 126.0 and p.y <= view_size.y - 68.0:
+			held["left"] = true
+		elif p.x >= 88.0 and p.x <= 150.0 and p.y >= view_size.y - 126.0 and p.y <= view_size.y - 68.0:
+			held["back"] = true
+		elif p.x >= 152.0 and p.x <= 214.0 and p.y >= view_size.y - 126.0 and p.y <= view_size.y - 68.0:
+			held["right"] = true
 		if p.x > view_size.x - 310.0 and p.y > view_size.y - 90.0:
 			held["run"] = true
 
