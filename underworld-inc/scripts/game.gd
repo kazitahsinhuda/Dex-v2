@@ -24,6 +24,8 @@ var mission_stage := 0
 var cash := 2450
 var sales_completed := 0
 var stock_owned := false
+var stock_repaired := false
+var repair_bay_position := Vector3(10, 0, -2)
 var marcus: Node3D
 var package_crate: Node3D
 var lena: Node3D
@@ -873,6 +875,20 @@ func _interact() -> void:
 		_update_hud()
 		return
 
+	if mission_stage >= 4 and stock_owned and player_pos.distance_to(repair_bay_position) < 3.8:
+		if not stock_repaired:
+			if cash >= 250:
+				cash -= 250
+				stock_repaired = true
+				_show_message("GARAGE COMPLETE. Lena's workshop has repaired the trade-in. Take it back to the reception desk and close the sale.")
+			else:
+				_show_message("The workshop needs $250 for parts before it can repair this car.")
+		else:
+			_show_message("The trade-in is ready for its sale. Return to the reception desk.")
+		_update_hud()
+		_save_game()
+		return
+
 	var desk_pos := Vector3(0, 0, -1.2)
 	if player_pos.distance_to(desk_pos) < 4.5:
 		if mission_stage == 0:
@@ -897,12 +913,16 @@ func _interact() -> void:
 			if not stock_owned and cash >= 1200:
 				cash -= 1200
 				stock_owned = true
-				_show_message("You bought a trade-in for $1,200. Clean it up and list it — interact with the desk again to close the sale.")
-			elif stock_owned:
+				stock_repaired = false
+				_show_message("TRADE-IN ACQUIRED: $1,200. Take it to the garage workshop at the right side of the dealership. Repairs cost $250.")
+			elif stock_owned and stock_repaired:
 				cash += 1950
 				stock_owned = false
+				stock_repaired = false
 				sales_completed += 1
-				_show_message("SALE CLOSED: the car sold for $1,950. Your dealership made $750 profit.")
+				_show_message("SALE CLOSED: the repaired car sold for $1,950. Your dealership cleared $500 after purchase and repair costs.")
+			elif stock_owned:
+				_show_message("This trade-in is not ready. Take it to the garage workshop before listing it.")
 			else:
 				_show_message("You need $1,200 to buy your next trade-in. Take a drive and come back.")
 			if mission_stage == 4 and sales_completed >= 3:
@@ -1033,6 +1053,7 @@ func _save_game() -> void:
 	data.set_value("career", "cash", cash)
 	data.set_value("career", "sales_completed", sales_completed)
 	data.set_value("career", "stock_owned", stock_owned)
+	data.set_value("career", "stock_repaired", stock_repaired)
 	data.save("user://underworld_save.cfg")
 
 func _load_game() -> void:
@@ -1042,6 +1063,7 @@ func _load_game() -> void:
 		cash = int(data.get_value("career", "cash", 2450))
 		sales_completed = int(data.get_value("career", "sales_completed", 0))
 		stock_owned = bool(data.get_value("career", "stock_owned", false))
+		stock_repaired = bool(data.get_value("career", "stock_repaired", false))
 	first_deal_done = mission_stage >= 1
 	if is_instance_valid(marcus):
 		marcus.visible = mission_stage == 1 or mission_stage == 8
