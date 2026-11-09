@@ -31,6 +31,7 @@ func _run_tests() -> void:
 	game.package_crate.visible = false
 	game.lena.visible = false
 	game.evidence_case.visible = false
+	game.detective.visible = false
 	game.player.visible = true
 	game._update_mission_marker()
 	game._update_hud()
@@ -107,7 +108,21 @@ func _run_tests() -> void:
 		return
 	game.player.global_position = Vector3(0, 1, -1.2)
 	game._interact()
-	if not _check(game.mission_stage == 11, "Returning the final ledger should complete the campaign."):
+	if not _check(game.mission_stage == 11, "Returning the final ledger should unlock the final choice."):
+		return
+
+	game.player.global_position = game.detective.global_position
+	game._interact()
+	if not _check(game.mission_stage == 12, "Choosing Detective Reed should unlock the clean ending."):
+		return
+
+	# Verify the alternate ending branch as well.
+	game.mission_stage = 11
+	game.detective.visible = true
+	game.marcus.visible = true
+	game.player.global_position = game.marcus.global_position
+	game._interact()
+	if not _check(game.mission_stage == 13, "Choosing Marcus should unlock the underworld ending."):
 		return
 
 	game._save_game()
