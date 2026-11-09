@@ -106,10 +106,10 @@ func _build_world() -> void:
 	_make_static_box("Main road", Vector3(0, 0.015, 15), Vector3(100, 0.08, 12), Color(0.075, 0.085, 0.10))
 	_make_static_box("Cross road", Vector3(-24, 0.02, -2), Vector3(12, 0.09, 80), Color(0.075, 0.085, 0.10))
 	# Raised pavements, curbs and painted lane guides give the district a real street profile.
-	_make_static_box("Sidewalk", Vector3(0, 0.07, 8.35), Vector3(100, 0.14, 2.7), Color(0.36, 0.37, 0.36))
-	_make_static_box("Sidewalk", Vector3(0, 0.07, 21.65), Vector3(100, 0.14, 2.7), Color(0.36, 0.37, 0.36))
-	_make_static_box("Sidewalk", Vector3(-31.35, 0.07, -2), Vector3(2.7, 0.14, 80), Color(0.36, 0.37, 0.36))
-	_make_static_box("Sidewalk", Vector3(-16.65, 0.07, -2), Vector3(2.7, 0.14, 80), Color(0.36, 0.37, 0.36))
+	_make_box("Sidewalk", Vector3(0, 0.07, 8.35), Vector3(100, 0.14, 2.7), Color(0.36, 0.37, 0.36), self)
+	_make_box("Sidewalk", Vector3(0, 0.07, 21.65), Vector3(100, 0.14, 2.7), Color(0.36, 0.37, 0.36), self)
+	_make_box("Sidewalk", Vector3(-31.35, 0.07, -2), Vector3(2.7, 0.14, 80), Color(0.36, 0.37, 0.36), self)
+	_make_box("Sidewalk", Vector3(-16.65, 0.07, -2), Vector3(2.7, 0.14, 80), Color(0.36, 0.37, 0.36), self)
 	for x in range(-45, 50, 10):
 		_make_box("Road marking", Vector3(x, 0.08, 15), Vector3(4.0, 0.028, 0.18), Color(0.95, 0.88, 0.64), self)
 	for z in range(-38, 38, 9):
