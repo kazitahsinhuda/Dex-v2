@@ -48,6 +48,35 @@ func _run_tests() -> void:
 	assert(game.cash == 6450, "Selling the trade-in should return $1,950.")
 	assert(game.sales_completed == 2, "Story completion and trade-in should count as sales.")
 
+	# Complete the two additional dealership sales required to unlock Chapter 2.
+	game._interact()
+	game._interact()
+	game._interact()
+	game._interact()
+	assert(game.mission_stage == 5, "Two further profitable sales should unlock Chapter 2.")
+
+	game.player.global_position = game.lena.global_position
+	game._interact()
+	assert(game.mission_stage == 6, "Lena should give the storage-yard mission.")
+	game.player.global_position = game.evidence_case.global_position
+	game._interact()
+	assert(game.mission_stage == 7, "Recovering the service file should advance the story.")
+	game.police_active = false
+	game.police_car.visible = false
+
+	game.player.global_position = Vector3(0, 1, -1.2)
+	game._interact()
+	assert(game.mission_stage == 8, "Returning the service file should unlock the Marcus meeting.")
+	game.player.global_position = game.marcus.global_position
+	game._interact()
+	assert(game.mission_stage == 9, "Marcus should reveal the records-depot location.")
+	game.player.global_position = game.evidence_case.global_position
+	game._interact()
+	assert(game.mission_stage == 10, "Finding the final ledger should advance to the finale.")
+	game.player.global_position = Vector3(0, 1, -1.2)
+	game._interact()
+	assert(game.mission_stage == 11, "Returning the final ledger should complete the campaign.")
+
 	game._save_game()
 	print("UNDERWORLD GAMEPLAY TEST: PASS")
 	quit()
