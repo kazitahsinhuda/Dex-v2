@@ -499,7 +499,7 @@ func _build_story_characters() -> void:
 	package_crate.visible = false
 	add_child(package_crate)
 
-	lena = _make_story_npc("Lena Ortiz", Vector3(8, 0, -1), Color(0.16, 0.34, 0.30))
+	lena = _make_story_npc("Lena Ortiz", Vector3(10, 0, -2), Color(0.16, 0.34, 0.30))
 	lena.visible = false
 
 	evidence_case = Node3D.new()
@@ -1019,7 +1019,7 @@ func _update_mission_marker() -> void:
 		2:
 			mission_marker.global_position = Vector3(-30, 0.12, -25)
 		5:
-			mission_marker.global_position = Vector3(8, 0.12, -1)
+			mission_marker.global_position = Vector3(10, 0.12, -2)
 		6, 9:
 			mission_marker.global_position = evidence_case.global_position + Vector3(0, 0.12, 0)
 		_:
