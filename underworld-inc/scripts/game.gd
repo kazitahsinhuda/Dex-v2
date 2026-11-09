@@ -58,10 +58,10 @@ var intro_lines: Array[String] = [
 	"Alex Carter. 7:40 AM. Another shift, another empty promise.",
 	"MANAGER: You're fired, Alex. The company is cutting staff. Clear your locker.",
 	"Three weeks later. The rent is overdue, the landlord is calling, and your savings are almost gone.",
-	"A letter arrives from a lawyer: your missing father has left you a property in Westbridge.",
+	"A solicitor's voicemail is the only lead: your missing father left an old dealership in Westbridge. The paperwork is still there.",
 	"With nowhere else to go, Alex packs what he can and takes the first bus out of town.",
 	"By noon, he is standing outside Westbridge Motors — an abandoned dealership with unpaid bills and a locked office.",
-	"It is not much of an inheritance. But it may be his only chance to start over."
+	"Alex has no plan beyond opening the doors, selling a car, and keeping a roof over his head."
 ]
 
 func _ready() -> void:
@@ -160,20 +160,6 @@ func _make_parked_car(pos: Vector3, paint: Color, facing: float) -> void:
 	collision.shape = collision_shape
 	vehicle.add_child(collision)
 	vehicle.rotation.y = facing
-	var body := MeshInstance3D.new()
-	var body_mesh := BoxMesh.new()
-	body_mesh.size = Vector3(1.8, 0.65, 3.6)
-	body.mesh = body_mesh
-	body.position.y = 0.0
-	body.material_override = _paint_material(paint)
-	vehicle.add_child(body)
-	var cabin := MeshInstance3D.new()
-	var cabin_mesh := BoxMesh.new()
-	cabin_mesh.size = Vector3(1.42, 0.72, 1.75)
-	cabin.mesh = cabin_mesh
-	cabin.position = Vector3(0, 0.62, -0.1)
-	cabin.material_override = _material(Color(0.055, 0.105, 0.14))
-	vehicle.add_child(cabin)
 	_build_car_visual(vehicle, paint, false)
 	add_child(vehicle)
 	parked_cars.append(vehicle)
@@ -291,8 +277,7 @@ func _paint_material(color: Color) -> StandardMaterial3D:
 	return mat
 
 func _textured_material(color: Color, style: String, frequency: float, uv_scale: float) -> StandardMaterial3D:
-	# Reuse generated materials instead of allocating a separate 256px noise texture
-	# for every wall/building. This cuts startup work and GPU memory on Android.
+	# Reuse generated materials to keep procedural surface memory under control on Android.
 	var cache_key := "%s|%s|%.4f|%.2f" % [style, color.to_html(true), frequency, uv_scale]
 	if generated_material_cache.has(cache_key):
 		return generated_material_cache[cache_key] as StandardMaterial3D
@@ -1057,8 +1042,8 @@ func _drive_car(delta: float) -> void:
 
 	var forward_dir := -vehicle.global_transform.basis.z
 	var forward_speed := vehicle.velocity.dot(forward_dir)
-	var target_speed := throttle * CAR_SPEED if throttle >= 0.0 else throttle * REVERSE_SPEED
-	var acceleration := 6.5
+	var target_speed: float = throttle * CAR_SPEED if throttle >= 0.0 else throttle * REVERSE_SPEED
+	var acceleration: float = 6.5
 	if throttle != 0.0 and forward_speed * throttle < -0.1:
 		acceleration = 14.0 # Brakes first, then engages reverse.
 	elif throttle == 0.0:
@@ -1066,7 +1051,7 @@ func _drive_car(delta: float) -> void:
 	forward_speed = move_toward(forward_speed, target_speed, acceleration * delta)
 
 	# Steering only changes heading while the car is actually rolling.
-	var speed_ratio := clampf(absf(forward_speed) / 3.0, 0.0, 1.0)
+	var speed_ratio: float = clampf(absf(forward_speed) / 3.0, 0.0, 1.0)
 	vehicle.rotation.y -= steering * TURN_SPEED * delta * speed_ratio * sign(forward_speed if absf(forward_speed) > 0.05 else 1.0)
 	forward_dir = -vehicle.global_transform.basis.z
 	vehicle.velocity.x = forward_dir.x * forward_speed
