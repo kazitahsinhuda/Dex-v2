@@ -29,6 +29,7 @@ var repair_bay_position := Vector3(10, 0, -2)
 var marcus: Node3D
 var package_crate: Node3D
 var lena: Node3D
+var detective: Node3D
 var evidence_case: Node3D
 var mission_marker: Node3D
 var police_car: CharacterBody3D
@@ -503,6 +504,8 @@ func _build_story_characters() -> void:
 
 	lena = _make_story_npc("Lena Ortiz", Vector3(10, 0, -2), Color(0.16, 0.34, 0.30))
 	lena.visible = false
+	detective = _make_story_npc("Detective Reed", Vector3(-24, 0, -2), Color(0.12, 0.17, 0.28))
+	detective.visible = false
 
 	evidence_case = Node3D.new()
 	evidence_case.name = "Father Evidence Case"
@@ -906,9 +909,10 @@ func _interact() -> void:
 			_show_message("The service file points back to Marcus. He has agreed to meet you at the freight yard. This time, get the truth.")
 		elif mission_stage == 10:
 			mission_stage = 11
-			cash += 5000
-			sales_completed += 1
-			_show_message("CAMPAIGN COMPLETE. The final ledger proves your father left Westbridge to keep you out of Vale's operation. You now control the dealership — and the choices that come with it. +$5,000.")
+			detective.visible = true
+			marcus.visible = true
+			_show_message("THE FINAL CHOICE. Detective Reed can expose the port network and clear your father's name. Marcus offers you control of the same criminal empire. Choose who you become.")
+			_update_mission_marker()
 		elif mission_stage >= 4:
 			if not stock_owned and cash >= 1200:
 				cash -= 1200
@@ -1004,6 +1008,28 @@ func _interact() -> void:
 		_save_game()
 		return
 
+	if mission_stage == 11 and is_instance_valid(detective) and player_pos.distance_to(detective.global_position) < 3.5:
+		mission_stage = 12
+		detective.visible = false
+		marcus.visible = false
+		cash += 5000
+		_show_message("ENDING — CLEAN HANDS. Reed releases the evidence. The port network is exposed, your father's name is cleared, and Westbridge Motors survives as a legitimate business. +$5,000.")
+		_update_mission_marker()
+		_update_hud()
+		_save_game()
+		return
+
+	if mission_stage == 11 and is_instance_valid(marcus) and player_pos.distance_to(marcus.global_position) < 3.5:
+		mission_stage = 13
+		detective.visible = false
+		marcus.visible = false
+		cash += 7500
+		_show_message("ENDING — KINGMAKER. You destroy the public copy and take Marcus's offer. Westbridge Motors becomes the front for a city-wide operation. +$7,500.")
+		_update_mission_marker()
+		_update_hud()
+		_save_game()
+		return
+
 	if player_pos.distance_to(car.global_position) < 4.5:
 		_show_message("The keys are on the reception desk. Find the folder first.")
 	elif mission_stage == 1 and is_instance_valid(marcus):
@@ -1040,6 +1066,8 @@ func _update_mission_marker() -> void:
 			mission_marker.global_position = Vector3(-30, 0.12, -25)
 		5:
 			mission_marker.global_position = Vector3(10, 0.12, -2)
+		11:
+			mission_marker.global_position = Vector3(-24, 0.12, -2)
 		6, 9:
 			mission_marker.global_position = evidence_case.global_position + Vector3(0, 0.12, 0)
 		_:
@@ -1066,7 +1094,9 @@ func _load_game() -> void:
 		stock_repaired = bool(data.get_value("career", "stock_repaired", false))
 	first_deal_done = mission_stage >= 1
 	if is_instance_valid(marcus):
-		marcus.visible = mission_stage == 1 or mission_stage == 8
+		marcus.visible = mission_stage == 1 or mission_stage == 8 or mission_stage == 11
+	if is_instance_valid(detective):
+		detective.visible = mission_stage == 11
 	if is_instance_valid(package_crate):
 		package_crate.visible = mission_stage == 2
 	if is_instance_valid(lena):
@@ -1100,7 +1130,13 @@ func _update_hud() -> void:
 			objective.text = "CHAPTER 3  |  Retrieve the original ledger from the records depot."
 		10:
 			objective.text = "CHAPTER 3  |  Return to Westbridge Motors with the final ledger."
+		11:
+			objective.text = "FINAL CHOICE  |  Detective Reed: expose the network. Marcus Vale: take control."
+		12:
+			objective.text = "ENDING: CLEAN HANDS  |  The network is exposed. Continue building a legitimate dealership."
+		13:
+			objective.text = "ENDING: KINGMAKER  |  You control the underworld. Continue building your empire."
 		_:
-			objective.text = "CAMPAIGN COMPLETE  |  Run Westbridge Motors, grow your cash, and choose your future."
+			objective.text = "CAMPAIGN COMPLETE  |  Run Westbridge Motors and build your future."
 	if police_active:
 		objective.text += "     |     HEAT: 1"
