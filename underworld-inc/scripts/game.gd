@@ -51,9 +51,11 @@ var camera_pitch := 0.0
 var intro_lines: Array[String] = [
 	"Alex Carter. 7:40 AM. Another shift, another empty promise.",
 	"MANAGER: You're fired, Alex. The company is cutting staff. Clear your locker.",
-	"Three weeks later. Rent is overdue. Your savings are almost gone.",
-	"A letter arrives from a lawyer: your father has left you a property in Westbridge.",
-	"An abandoned car dealership. It may be your only chance to start over."
+	"Three weeks later. The rent is overdue, the landlord is calling, and your savings are almost gone.",
+	"A letter arrives from a lawyer: your missing father has left you a property in Westbridge.",
+	"With nowhere else to go, Alex packs what he can and takes the first bus out of town.",
+	"By noon, he is standing outside Westbridge Motors — an abandoned dealership with unpaid bills and a locked office.",
+	"It is not much of an inheritance. But it may be his only chance to start over."
 ]
 
 func _ready() -> void:
