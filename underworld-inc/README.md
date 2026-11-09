@@ -14,9 +14,10 @@ A 3D, story-driven dealership and underworld simulator for Android, built with G
 ## World and controls
 
 - Explore Westbridge on foot in third person.
+- Live Westbridge minimap shows the player's position and current mission waypoint.
 - Enter and drive the starter car; accelerate, reverse, and steer with the on-screen D-pad.
 - Hold the D-pad buttons to move; hold RUN to sprint.
-- INTERACT advances the prologue, talks to characters, collects mission evidence, and operates the dealership.
+- INTERACT advances the prologue, talks to characters, collects mission evidence, and operates the dealership/workshop.
 - Drag on the open right side of the screen to orbit the camera.
 - Device text-to-speech reads story messages when an Android voice is available.
 - Career progress, cash, stock, and mission stage save automatically.
