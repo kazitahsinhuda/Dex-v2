@@ -110,7 +110,6 @@ func _build_world() -> void:
 	_make_static_box("Sidewalk", Vector3(0, 0.07, 21.65), Vector3(100, 0.14, 2.7), Color(0.36, 0.37, 0.36))
 	_make_static_box("Sidewalk", Vector3(-31.35, 0.07, -2), Vector3(2.7, 0.14, 80), Color(0.36, 0.37, 0.36))
 	_make_static_box("Sidewalk", Vector3(-16.65, 0.07, -2), Vector3(2.7, 0.14, 80), Color(0.36, 0.37, 0.36))
-	_make_box("Road marking", Vector3(0, 0.075, 15), Vector3(100, 0.025, 0.12), Color(0.88, 0.72, 0.30), self)
 	for x in range(-45, 50, 10):
 		_make_box("Road marking", Vector3(x, 0.08, 15), Vector3(4.0, 0.028, 0.18), Color(0.95, 0.88, 0.64), self)
 	for z in range(-38, 38, 9):
@@ -1328,7 +1327,7 @@ func _interact() -> void:
 	if in_car:
 		var exiting_vehicle: CharacterBody3D = active_car if is_instance_valid(active_car) else car
 		in_car = false
-		player.global_position = exiting_vehicle.global_position + exiting_vehicle.global_transform.basis.x * 2.2 + Vector3(0, 0.2, 0)
+		player.global_position = exiting_vehicle.global_position + exiting_vehicle.global_transform.basis.x * 2.2 + Vector3(0, 0.0, 0)
 		player.visible = true
 		active_car = car
 		_show_message("You stepped out. Westbridge is yours to explore.")
