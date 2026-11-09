@@ -31,6 +31,7 @@ var marcus: Node3D
 var package_crate: Node3D
 var lena: Node3D
 var detective: Node3D
+var prologue_manager: Node3D
 var evidence_case: Node3D
 var mission_marker: Node3D
 var police_car: CharacterBody3D
@@ -64,6 +65,7 @@ func _ready() -> void:
 	_build_car()
 	_build_police_car()
 	_build_story_characters()
+	_build_prologue_stage()
 	_build_camera()
 	_build_ui()
 	_build_mission_marker()
@@ -250,10 +252,57 @@ func _make_static_box(label_text: String, pos: Vector3, size: Vector3, color: Co
 	var box := BoxMesh.new()
 	box.size = size
 	visual.mesh = box
-	visual.material_override = _material(color)
+	visual.material_override = _world_material(label_text, color)
 	body.add_child(visual)
 	add_child(body)
 	return body
+
+func _world_material(label_text: String, color: Color) -> StandardMaterial3D:
+	match label_text:
+		"Ground":
+			return _textured_material(color, "grass", 0.055, 4.0)
+		"Main road", "Cross road":
+			return _textured_material(color, "asphalt", 0.11, 3.0)
+		"City building", "Showroom body":
+			return _textured_material(color, "concrete", 0.075, 3.0)
+		"Garage floor":
+			return _textured_material(color, "garage_concrete", 0.09, 4.0)
+		"Showroom roof":
+			return _textured_material(color, "roof_metal", 0.14, 2.0)
+		"Reception desk":
+			return _textured_material(color, "wood", 0.12, 2.0)
+		_:
+			return _material(color)
+
+func _paint_material(color: Color) -> StandardMaterial3D:
+	var mat := _material(color)
+	mat.metallic = 0.48
+	mat.roughness = 0.28
+	mat.clearcoat_enabled = true
+	mat.clearcoat = 0.65
+	return mat
+
+func _textured_material(color: Color, style: String, frequency: float, uv_scale: float) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.roughness = 0.92
+	mat.uv1_triplanar = true
+	mat.uv1_scale = Vector3(uv_scale, uv_scale, uv_scale)
+	var noise := FastNoiseLite.new()
+	noise.seed = abs(hash(style))
+	noise.frequency = frequency
+	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	noise.fractal_type = FastNoiseLite.FRACTAL_FBM
+	noise.fractal_octaves = 4
+	noise.fractal_lacunarity = 2.1
+	noise.fractal_gain = 0.48
+	var texture := NoiseTexture2D.new()
+	texture.noise = noise
+	texture.width = 256
+	texture.height = 256
+	texture.seamless = true
+	mat.albedo_texture = texture
+	return mat
 
 func _material(color: Color) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
@@ -583,6 +632,54 @@ func _build_mission_marker() -> void:
 	add_child(mission_marker)
 	_update_mission_marker()
 
+func _build_prologue_stage() -> void:
+	# Separate sets for the opening: office, Alex's apartment, then the bus stop.
+	_make_static_box("Office floor", Vector3(130, -0.12, 0), Vector3(16, 0.24, 14), Color(0.20, 0.22, 0.24))
+	_make_static_box("Office back wall", Vector3(130, 2.2, -7), Vector3(16, 4.4, 0.25), Color(0.28, 0.31, 0.34))
+	_make_static_box("Office side wall", Vector3(122, 2.2, 0), Vector3(0.25, 4.4, 14), Color(0.24, 0.27, 0.30))
+	_make_box("Office desk", Vector3(130, 0.72, -1.5), Vector3(4.2, 1.35, 1.2), Color(0.19, 0.13, 0.09), self)
+	_make_box("Office desk surface", Vector3(130, 1.42, -1.5), Vector3(4.4, 0.12, 1.35), Color(0.38, 0.25, 0.15), self)
+	_make_box("Office monitor", Vector3(130, 2.0, -1.75), Vector3(1.1, 0.72, 0.12), Color(0.035, 0.05, 0.065), self)
+	_make_box("Office window", Vector3(135, 2.5, -6.82), Vector3(4.0, 2.2, 0.08), Color(0.10, 0.22, 0.30, 0.75), self)
+	prologue_manager = _make_story_npc("MANAGER", Vector3(133, 0, -3.0), Color(0.22, 0.25, 0.29))
+
+	_make_static_box("Apartment floor", Vector3(150, -0.12, 0), Vector3(14, 0.24, 12), Color(0.31, 0.27, 0.22))
+	_make_static_box("Apartment back wall", Vector3(150, 2.1, -6), Vector3(14, 4.2, 0.25), Color(0.42, 0.35, 0.28))
+	_make_box("Apartment bed base", Vector3(147, 0.38, -1), Vector3(3.4, 0.65, 2.8), Color(0.17, 0.19, 0.22), self)
+	_make_box("Apartment mattress", Vector3(147, 0.78, -1), Vector3(3.3, 0.22, 2.7), Color(0.70, 0.68, 0.60), self)
+	_make_box("Apartment table", Vector3(153, 0.62, -2), Vector3(1.5, 1.1, 1.0), Color(0.24, 0.16, 0.10), self)
+	_make_box("Inheritance letter", Vector3(153, 1.2, -2), Vector3(0.65, 0.035, 0.45), Color(0.91, 0.82, 0.61), self)
+	_make_box("Apartment window", Vector3(150, 2.3, -5.82), Vector3(3.5, 1.8, 0.08), Color(0.12, 0.24, 0.31), self)
+
+	_make_static_box("Bus stop platform", Vector3(170, -0.1, 0), Vector3(16, 0.2, 10), Color(0.30, 0.31, 0.30))
+	_make_box("Bus shelter roof", Vector3(170, 3.0, -1), Vector3(8.0, 0.22, 3.0), Color(0.10, 0.13, 0.17), self)
+	_make_box("Bus shelter glass", Vector3(170, 1.5, -2.4), Vector3(8.0, 2.8, 0.08), Color(0.20, 0.37, 0.43, 0.5), self)
+	_make_box("Bus stop bench", Vector3(170, 0.72, -0.8), Vector3(3.2, 0.18, 0.55), Color(0.31, 0.20, 0.12), self)
+	_make_box("Westbridge bus", Vector3(175, 1.45, 4.0), Vector3(7.0, 2.8, 2.5), Color(0.18, 0.30, 0.39), self)
+	_make_box("Bus windows", Vector3(175, 2.05, 2.72), Vector3(6.2, 1.15, 0.08), Color(0.07, 0.17, 0.22), self)
+
+func _set_intro_scene(index: int) -> void:
+	if not is_instance_valid(player):
+		return
+	if index <= 1:
+		player.global_position = Vector3(130, 1.0, 3.0)
+		prologue_manager.visible = true
+	elif index <= 3:
+		player.global_position = Vector3(150, 1.0, 3.0)
+		prologue_manager.visible = false
+	elif index == 4:
+		player.global_position = Vector3(170, 1.0, 3.0)
+		prologue_manager.visible = false
+	else:
+		player.global_position = Vector3(0, 1.0, 5.0)
+		prologue_manager.visible = false
+	player.velocity = Vector3.ZERO
+	camera_yaw = 0.0
+	camera_pitch = 0.0
+	if is_instance_valid(camera):
+		camera.global_position = player.global_position + Vector3(0, 3.4, 7.0)
+		camera.look_at(player.global_position + Vector3(0, 1.1, -1.0))
+
 func _build_camera() -> void:
 	camera = Camera3D.new()
 	camera.name = "FollowCamera"
@@ -849,6 +946,7 @@ func _follow_camera(delta: float) -> void:
 func _start_intro() -> void:
 	intro_active = true
 	intro_index = 0
+	_set_intro_scene(intro_index)
 	_show_message(intro_lines[intro_index] + "  (Tap INTERACT to continue)")
 	objective.text = "PROLOGUE  |  ALEX CARTER — BEFORE WESTBRIDGE"
 
@@ -856,9 +954,11 @@ func _advance_intro() -> void:
 	intro_index += 1
 	if intro_index >= intro_lines.size():
 		intro_active = false
+		_set_intro_scene(intro_lines.size())
 		_show_message("You arrive at Westbridge Motors. The keys are yours. Take a look around, then check the reception desk.")
 		_update_hud()
 		return
+	_set_intro_scene(intro_index)
 	_show_message(intro_lines[intro_index] + "  (Tap INTERACT to continue)")
 
 func _speak_message(line: String) -> void:
