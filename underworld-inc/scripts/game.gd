@@ -345,12 +345,28 @@ func _textured_material(color: Color, style: String, frequency: float, uv_scale:
 	noise.fractal_octaves = 5
 	noise.fractal_lacunarity = 2.1
 	noise.fractal_gain = 0.48
-	var texture := NoiseTexture2D.new()
-	texture.noise = noise
-	texture.width = 1024
-	texture.height = 1024
-	texture.seamless = true
-	mat.albedo_texture = texture
+	# Use imported, hand-authored tiling texture assets in the APK. Procedural noise is
+	# retained only as a safe fallback if an asset fails to import.
+	var texture_asset := style
+	match style:
+		"garage_concrete", "pavement":
+			texture_asset = "concrete"
+		"roof_metal":
+			texture_asset = "metal"
+		"worn_floorboards":
+			texture_asset = "wood"
+		"road_paint":
+			texture_asset = "asphalt"
+	var imported_texture := load("res://underworld-inc/assets/textures/%s.svg" % texture_asset) as Texture2D
+	if imported_texture != null:
+		mat.albedo_texture = imported_texture
+	else:
+		var texture := NoiseTexture2D.new()
+		texture.noise = noise
+		texture.width = 1024
+		texture.height = 1024
+		texture.seamless = true
+		mat.albedo_texture = texture
 
 	# Fine surface relief: asphalt grain, concrete pores and wood grain catch light.
 	var normal_image := Image.create(256, 256, false, Image.FORMAT_RGBA8)
