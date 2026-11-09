@@ -58,7 +58,13 @@ func _run_tests() -> void:
 	if not _check(game.parked_cars.size() >= 4, "Street vehicles should be enterable CharacterBody3D cars."):
 		return
 	var road_material: StandardMaterial3D = game._world_material("Main road", Color(0.07, 0.08, 0.1))
-	if not _check(road_material.albedo_texture != null and road_material.normal_enabled and road_material.normal_texture != null, "Roads should have generated color and surface-normal textures."):
+	if not _check(road_material.albedo_texture != null and road_material.normal_enabled and road_material.normal_texture != null, "Roads should have color and surface-normal textures."):
+		return
+	if not _check(not (road_material.albedo_texture is NoiseTexture2D), "Roads should load the authored asphalt texture asset, not only runtime noise."):
+		return
+	var fabric_texture := load("res://underworld-inc/assets/textures/fabric.svg") as Texture2D
+	var denim_texture := load("res://underworld-inc/assets/textures/denim.svg") as Texture2D
+	if not _check(fabric_texture != null and denim_texture != null, "Player fabric and denim texture assets must import into the project."):
 		return
 	var shared_material_a: StandardMaterial3D = game._textured_material(Color(0.2, 0.2, 0.2), "cache_test", 0.05, 2.0)
 	var shared_material_b: StandardMaterial3D = game._textured_material(Color(0.2, 0.2, 0.2), "cache_test", 0.05, 2.0)
