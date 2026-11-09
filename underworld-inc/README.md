@@ -4,9 +4,9 @@ A 3D, story-driven dealership and underworld simulator for Android, built with G
 
 ## Campaign
 
-- Opening prologue now moves through separate 3D sets: Alex is fired in the office, returns to his apartment, waits at the bus stop, and arrives outside Westbridge Motors.
+- Opening prologue moves through the office, Alex's apartment, and the bus stop. A solicitor's voicemail points him to his father's old dealership; the inheritance letter is not revealed until after Alex completes his first repaired-car sale.
 - Chapter 1: investigate the abandoned dealership, meet Marcus Vale, recover the freight-yard package, and escape a police pursuit.
-- Dealership career: buy trade-ins for $1,200 and sell for $1,950. Two additional profitable sales unlock the next story chapter.
+- First dealership job: buy a neglected hatchback for $1,200, pay $250 for repairs, and sell it for $1,950. Only after this first sale does Alex find the solicitor's letter and learn why his missing father matters. Later trade-ins use the same buy/repair/sell loop; two more profitable sales unlock the next story chapter.
 - Chapter 2: work with mechanic Lena Ortiz, recover the service file from a storage yard, and escape a second police pursuit.
 - Chapter 3: confront Marcus, recover the original records-depot ledger, then choose an ending: expose the network with Detective Reed or join Marcus and take control of it.
 - Post-campaign free play: continue buying and selling trade-ins and grow the dealership.
@@ -16,9 +16,9 @@ A 3D, story-driven dealership and underworld simulator for Android, built with G
 - Explore Westbridge on foot in third person.
 - Live Westbridge minimap shows the player's position, mission waypoint, and both destinations during the final choice.
 - Parked street cars are enterable and drivable; tap INTERACT beside a car to enter and again to exit.
-- Roads, grass, building facades, showroom surfaces, garage concrete, and the prologue interiors use generated surface textures; repeated procedural materials are shared to reduce Android startup and memory cost. Vehicle paint has metallic clearcoat, and parked cars have glass, bumpers, and lights.
+- Roads, grass, building facades, showroom surfaces, garage concrete, and prologue interiors use generated color and normal maps for visible surface relief. Vehicle bodies use rounded panels, curved glass, mirrors, wheel rims, lamps, and metallic paint.
 - Saves from earlier prototype builds are migrated once to a fresh story start so the new prologue is not skipped; current-version campaign saves are preserved.
-- Enter and drive the starter car; accelerate, reverse, and steer with the on-screen D-pad.
+- Enter and drive the starter car; acceleration builds gradually, reverse is slower, coasting has rolling resistance, and steering depends on actual road speed.
 - Hold the D-pad buttons to move; hold RUN to sprint.
 - INTERACT advances the prologue, talks to characters, collects mission evidence, and operates the dealership/workshop.
 - Drag on the open right side of the screen to orbit the camera.
