@@ -16,7 +16,8 @@ A 3D, story-driven dealership and underworld simulator for Android, built with G
 - Explore Westbridge on foot in third person.
 - Live Westbridge minimap shows the player's position, mission waypoint, and both destinations during the final choice.
 - Parked street cars are enterable and drivable; tap INTERACT beside a car to enter and again to exit.
-- Roads, grass, building facades, showroom surfaces, garage concrete, and selected wood/metal surfaces use generated noise textures; vehicle paint has metallic clearcoat.
+- Roads, grass, building facades, showroom surfaces, garage concrete, and the prologue interiors use generated surface textures; repeated procedural materials are shared to reduce Android startup and memory cost. Vehicle paint has metallic clearcoat, and parked cars have glass, bumpers, and lights.
+- Saves from earlier prototype builds are migrated once to a fresh story start so the new prologue is not skipped; current-version campaign saves are preserved.
 - Enter and drive the starter car; accelerate, reverse, and steer with the on-screen D-pad.
 - Hold the D-pad buttons to move; hold RUN to sprint.
 - INTERACT advances the prologue, talks to characters, collects mission evidence, and operates the dealership/workshop.
