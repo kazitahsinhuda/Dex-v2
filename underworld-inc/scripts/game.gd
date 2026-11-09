@@ -88,7 +88,11 @@ func _build_world() -> void:
 	env.sky.sky_material = ProceduralSkyMaterial.new()
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color(0.62, 0.69, 0.82)
-	env.ambient_light_energy = 0.7
+	env.ambient_light_energy = 0.82
+	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.fog_enabled = true
+	env.fog_light_color = Color(0.60, 0.68, 0.76)
+	env.fog_density = 0.0018
 	world_env.environment = env
 	add_child(world_env)
 
@@ -101,8 +105,17 @@ func _build_world() -> void:
 	_make_static_box("Ground", Vector3(0, -0.25, 0), Vector3(100, 0.5, 100), Color(0.18, 0.23, 0.22))
 	_make_static_box("Main road", Vector3(0, 0.015, 15), Vector3(100, 0.08, 12), Color(0.075, 0.085, 0.10))
 	_make_static_box("Cross road", Vector3(-24, 0.02, -2), Vector3(12, 0.09, 80), Color(0.075, 0.085, 0.10))
+	# Raised pavements, curbs and painted lane guides give the district a real street profile.
+	_make_static_box("Sidewalk", Vector3(0, 0.07, 8.35), Vector3(100, 0.14, 2.7), Color(0.36, 0.37, 0.36))
+	_make_static_box("Sidewalk", Vector3(0, 0.07, 21.65), Vector3(100, 0.14, 2.7), Color(0.36, 0.37, 0.36))
+	_make_static_box("Sidewalk", Vector3(-31.35, 0.07, -2), Vector3(2.7, 0.14, 80), Color(0.36, 0.37, 0.36))
+	_make_static_box("Sidewalk", Vector3(-16.65, 0.07, -2), Vector3(2.7, 0.14, 80), Color(0.36, 0.37, 0.36))
+	_make_box("Road marking", Vector3(0, 0.075, 15), Vector3(100, 0.025, 0.12), Color(0.88, 0.72, 0.30), self)
 	for x in range(-45, 50, 10):
-		_make_box("Road marking", Vector3(x, 0.07, 15), Vector3(4, 0.025, 0.18), Color(0.88, 0.82, 0.55), self)
+		_make_box("Road marking", Vector3(x, 0.08, 15), Vector3(4.0, 0.028, 0.18), Color(0.95, 0.88, 0.64), self)
+	for z in range(-38, 38, 9):
+		_make_box("Road marking", Vector3(-24, 0.08, z), Vector3(0.18, 0.028, 4.0), Color(0.92, 0.91, 0.84), self)
+	_build_street_detail()
 
 	# The dealership: a large glass-fronted showroom with a service bay.
 	_make_static_box("Showroom body", Vector3(0, 2.2, -10), Vector3(22, 4.4, 15), Color(0.24, 0.29, 0.34))
@@ -211,10 +224,46 @@ func _make_streetlight(pos: Vector3) -> void:
 
 func _make_building(pos: Vector3, size: Vector3, color: Color) -> void:
 	_make_static_box("City building", pos + Vector3(0, size.y / 2.0, 0), size, color)
-	for floor_index in range(1, int(size.y / 2.5)):
-		for side_index in [-1, 1]:
-			var window_pos := pos + Vector3(side_index * (size.x / 2.0 + 0.02), floor_index * 2.5 + 1.2, -size.z / 2.0 - 0.03)
-			_make_box("Window", window_pos, Vector3(0.9, 1.0, 0.08), Color(0.12, 0.29, 0.39), self)
+	var floors := maxi(1, int(size.y / 2.6))
+	var columns := maxi(2, int(size.x / 2.6))
+	var front_z := pos.z - size.z / 2.0 - 0.055
+	for floor_index in range(floors):
+		var floor_y := float(floor_index) * 2.55 + 1.35
+		for column_index in range(columns):
+			var x_pos := pos.x - size.x * 0.5 + (float(column_index) + 0.5) * size.x / float(columns)
+			var window_width := size.x / float(columns) * 0.62
+			var window_height := 1.25 if floor_index > 0 else 1.05
+			var glass := _make_box("Facade glass", Vector3(x_pos, floor_y, front_z), Vector3(window_width, window_height, 0.075), Color(0.075, 0.18, 0.25), self)
+			glass.material_override = _material(Color(0.055, 0.14, 0.20))
+			var frame_color := Color(0.18, 0.20, 0.22)
+			_make_box("Facade frame", Vector3(x_pos - window_width * 0.5, floor_y, front_z - 0.045), Vector3(0.07, window_height + 0.12, 0.045), frame_color, self)
+			_make_box("Facade frame", Vector3(x_pos + window_width * 0.5, floor_y, front_z - 0.045), Vector3(0.07, window_height + 0.12, 0.045), frame_color, self)
+			_make_box("Window sill", Vector3(x_pos, floor_y - window_height * 0.5 - 0.07, front_z - 0.07), Vector3(window_width + 0.12, 0.10, 0.14), color.darkened(0.22), self)
+		_make_box("Floor ledge", Vector3(pos.x, floor_y + 1.23, front_z - 0.10), Vector3(size.x + 0.25, 0.13, 0.24), color.lightened(0.12), self)
+	# Ground-floor entrance and a sign band make buildings read as places, not blank blocks.
+	_make_box("Shop entrance", Vector3(pos.x, 1.05, front_z - 0.08), Vector3(1.35, 2.1, 0.10), Color(0.025, 0.055, 0.075), self)
+	_make_box("Shop sign", Vector3(pos.x, 2.45, front_z - 0.10), Vector3(minf(size.x * 0.72, 7.0), 0.38, 0.16), color.lightened(0.24), self)
+	# Side-facing windows prevent the city from looking like a row of untextured cubes.
+	for floor_index in range(1, floors):
+		var side_y := float(floor_index) * 2.55 + 1.35
+		for side_index in [-1.0, 1.0]:
+			var side_x := pos.x + side_index * (size.x * 0.5 + 0.045)
+			_make_box("Window", Vector3(side_x, side_y, pos.z), Vector3(0.08, 1.05, 1.0), Color(0.08, 0.20, 0.28), self)
+
+func _build_street_detail() -> void:
+	# Repeating kerb stones and sidewalk joints add scale cues around the main block.
+	for x in range(-48, 49, 3):
+		_make_box("Kerb stone", Vector3(x, 0.17, 6.95), Vector3(2.85, 0.20, 0.24), Color(0.47, 0.48, 0.46), self)
+		_make_box("Kerb stone", Vector3(x, 0.17, 23.05), Vector3(2.85, 0.20, 0.24), Color(0.47, 0.48, 0.46), self)
+	for x in range(-48, 49, 4):
+		_make_box("Pavement joint", Vector3(x, 0.145, 8.4), Vector3(0.035, 0.006, 2.6), Color(0.23, 0.24, 0.24), self)
+		_make_box("Pavement joint", Vector3(x, 0.145, 21.6), Vector3(0.035, 0.006, 2.6), Color(0.23, 0.24, 0.24), self)
+	# Small road repairs and drain covers break up the uniform asphalt plane.
+	for patch_pos in [Vector3(-18, 0.071, 12.2), Vector3(26, 0.071, 17.4), Vector3(-39, 0.071, 16.8), Vector3(41, 0.071, 12.8)]:
+		var patch := _make_box("Asphalt patch", patch_pos, Vector3(2.8, 0.012, 1.25), Color(0.055, 0.061, 0.068), self)
+		patch.rotation.y = 0.08
+	for drain_pos in [Vector3(-12, 0.085, 8.8), Vector3(18, 0.085, 21.2), Vector3(-29.5, 0.085, -12)]:
+		_make_box("Drain cover", drain_pos, Vector3(0.72, 0.018, 0.42), Color(0.16, 0.18, 0.19), self)
 
 func _make_box(label_text: String, pos: Vector3, size: Vector3, color: Color, parent: Node) -> MeshInstance3D:
 	var mesh_instance := MeshInstance3D.new()
@@ -248,13 +297,15 @@ func _make_static_box(label_text: String, pos: Vector3, size: Vector3, color: Co
 func _world_material(label_text: String, color: Color) -> StandardMaterial3D:
 	match label_text:
 		"Ground":
-			return _textured_material(color, "grass", 0.055, 4.0)
+			return _textured_material(color, "grass", 0.055, 7.0)
 		"Main road", "Cross road":
 			return _textured_material(color, "asphalt", 0.11, 3.0)
 		"City building", "Showroom body":
 			return _textured_material(color, "concrete", 0.075, 3.0)
-		"Garage floor":
+		"Garage floor", "Sidewalk":
 			return _textured_material(color, "garage_concrete", 0.09, 4.0)
+		"Road marking":
+			return _textured_material(color, "road_paint", 0.12, 2.0)
 		"Showroom roof":
 			return _textured_material(color, "roof_metal", 0.14, 2.0)
 		"Reception desk", "Office desk":
@@ -291,27 +342,27 @@ func _textured_material(color: Color, style: String, frequency: float, uv_scale:
 	noise.frequency = frequency
 	noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 	noise.fractal_type = FastNoiseLite.FRACTAL_FBM
-	noise.fractal_octaves = 4
+	noise.fractal_octaves = 5
 	noise.fractal_lacunarity = 2.1
 	noise.fractal_gain = 0.48
 	var texture := NoiseTexture2D.new()
 	texture.noise = noise
-	texture.width = 384
-	texture.height = 384
+	texture.width = 1024
+	texture.height = 1024
 	texture.seamless = true
 	mat.albedo_texture = texture
 
 	# Fine surface relief: asphalt grain, concrete pores and wood grain catch light.
-	var normal_image := Image.create(128, 128, false, Image.FORMAT_RGBA8)
-	for py in range(128):
-		for px in range(128):
+	var normal_image := Image.create(256, 256, false, Image.FORMAT_RGBA8)
+	for py in range(256):
+		for px in range(256):
 			var nx := noise.get_noise_2d(float(px + 1), float(py)) - noise.get_noise_2d(float(px - 1), float(py))
 			var ny := noise.get_noise_2d(float(px), float(py + 1)) - noise.get_noise_2d(float(px), float(py - 1))
 			var normal := Vector3(-nx * 3.2, -ny * 3.2, 1.0).normalized()
 			normal_image.set_pixel(px, py, Color(normal.x * 0.5 + 0.5, normal.y * 0.5 + 0.5, normal.z * 0.5 + 0.5, 1.0))
 	mat.normal_enabled = true
 	mat.normal_texture = ImageTexture.create_from_image(normal_image)
-	mat.normal_scale = 0.38
+	mat.normal_scale = 0.52
 	generated_material_cache[cache_key] = mat
 	return mat
 
@@ -326,22 +377,166 @@ func _material(color: Color) -> StandardMaterial3D:
 func _build_player() -> void:
 	player = CharacterBody3D.new()
 	player.name = "Player"
-	player.position = Vector3(0, 1.0, 5)
+	player.position = Vector3(0, 0.0, 5)
 	var collision := CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
 	capsule.radius = 0.38
 	capsule.height = 1.8
 	collision.shape = capsule
+	collision.position.y = 0.9
 	player.add_child(collision)
 
-	# Alex Carter — a simple low-poly character rather than a featureless capsule.
+	# Alex Carter: a layered streetwear character with a rounded silhouette.
+	var hoodie := _textured_material(Color(0.055, 0.075, 0.105), "fabric", 0.085, 2.4)
+	var denim := _textured_material(Color(0.055, 0.075, 0.11), "denim", 0.12, 2.8)
+	var skin := _material(Color(0.67, 0.46, 0.34))
+	var hair_mat := _material(Color(0.035, 0.028, 0.025))
+
 	player_visual = MeshInstance3D.new()
-	var torso_mesh := BoxMesh.new()
-	torso_mesh.size = Vector3(0.72, 0.82, 0.42)
+	var torso_mesh := CapsuleMesh.new()
+	torso_mesh.radius = 0.34
+	torso_mesh.height = 1.08
 	player_visual.mesh = torso_mesh
-	player_visual.position.y = 0.88
-	player_visual.material_override = _material(Color(0.12, 0.25, 0.48))
+	player_visual.position.y = 1.06
+	player_visual.material_override = hoodie
 	player.add_child(player_visual)
+
+	# Hood volume and collar sit behind the neck instead of a square shoulder block.
+	var hood := MeshInstance3D.new()
+	var hood_mesh := SphereMesh.new()
+	hood_mesh.radius = 0.34
+	hood_mesh.height = 0.55
+	hood.mesh = hood_mesh
+	hood.scale = Vector3(0.92, 1.0, 0.72)
+	hood.position = Vector3(0, 1.43, 0.19)
+	hood.material_override = hoodie
+	player.add_child(hood)
+	var collar := MeshInstance3D.new()
+	var collar_mesh := TorusMesh.new()
+	collar_mesh.inner_radius = 0.17
+	collar_mesh.outer_radius = 0.23
+	collar.mesh = collar_mesh
+	collar.position.y = 1.51
+	collar.rotation_degrees.x = 90
+	collar.material_override = _material(Color(0.025, 0.035, 0.05))
+	player.add_child(collar)
+
+	for side in [-1.0, 1.0]:
+		var leg := MeshInstance3D.new()
+		var leg_mesh := CapsuleMesh.new()
+		leg_mesh.radius = 0.16
+		leg_mesh.height = 0.86
+		leg.mesh = leg_mesh
+		leg.position = Vector3(side * 0.19, 0.47, 0.015)
+		leg.material_override = denim
+		player.add_child(leg)
+		player_legs.append(leg)
+
+		var arm := MeshInstance3D.new()
+		var arm_mesh := CapsuleMesh.new()
+		arm_mesh.radius = 0.145
+		arm_mesh.height = 0.78
+		arm.mesh = arm_mesh
+		arm.position = Vector3(side * 0.43, 1.08, 0.015)
+		arm.rotation.z = side * -0.12
+		arm.material_override = hoodie
+		player.add_child(arm)
+		player_arms.append(arm)
+
+		var shoe := MeshInstance3D.new()
+		var shoe_mesh := CapsuleMesh.new()
+		shoe_mesh.radius = 0.13
+		shoe_mesh.height = 0.43
+		shoe.mesh = shoe_mesh
+		shoe.scale = Vector3(1.0, 0.52, 1.35)
+		shoe.position = Vector3(side * 0.19, 0.12, -0.10)
+		shoe.material_override = _material(Color(0.025, 0.028, 0.035))
+		player.add_child(shoe)
+
+		# Small stitched pocket panels break up the flat trouser silhouette.
+		var pocket := MeshInstance3D.new()
+		var pocket_mesh := SphereMesh.new()
+		pocket_mesh.radius = 0.10
+		pocket.mesh = pocket_mesh
+		pocket.scale = Vector3(0.72, 0.9, 0.10)
+		pocket.position = Vector3(side * 0.19, 0.63, -0.145)
+		pocket.material_override = _material(Color(0.075, 0.095, 0.13))
+		player.add_child(pocket)
+
+	var neck := MeshInstance3D.new()
+	var neck_mesh := CapsuleMesh.new()
+	neck_mesh.radius = 0.13
+	neck_mesh.height = 0.27
+	neck.mesh = neck_mesh
+	neck.position.y = 1.55
+	neck.material_override = skin
+	player.add_child(neck)
+
+	var head := MeshInstance3D.new()
+	var head_mesh := SphereMesh.new()
+	head_mesh.radius = 0.235
+	head_mesh.height = 0.48
+	head.mesh = head_mesh
+	head.position = Vector3(0, 1.78, -0.015)
+	head.material_override = skin
+	player.add_child(head)
+
+	var hair := MeshInstance3D.new()
+	var hair_mesh := SphereMesh.new()
+	hair_mesh.radius = 0.245
+	hair_mesh.height = 0.27
+	hair.mesh = hair_mesh
+	hair.position = Vector3(0, 1.94, 0.025)
+	hair.material_override = hair_mat
+	player.add_child(hair)
+
+	# Face details face forward (-Z), so the character reads clearly from behind-camera view.
+	for side in [-1.0, 1.0]:
+		var eye := MeshInstance3D.new()
+		var eye_mesh := SphereMesh.new()
+		eye_mesh.radius = 0.027
+		eye.mesh = eye_mesh
+		eye.position = Vector3(side * 0.082, 1.79, -0.226)
+		eye.material_override = _material(Color(0.035, 0.025, 0.02))
+		player.add_child(eye)
+		var brow := MeshInstance3D.new()
+		var brow_mesh := CapsuleMesh.new()
+		brow_mesh.radius = 0.018
+		brow_mesh.height = 0.10
+		brow.mesh = brow_mesh
+		brow.position = Vector3(side * 0.082, 1.84, -0.225)
+		brow.rotation_degrees.z = 90
+		brow.material_override = hair_mat
+		player.add_child(brow)
+
+	var nose := MeshInstance3D.new()
+	var nose_mesh := SphereMesh.new()
+	nose_mesh.radius = 0.045
+	nose.mesh = nose_mesh
+	nose.scale = Vector3(0.75, 0.85, 0.75)
+	nose.position = Vector3(0, 1.73, -0.245)
+	nose.material_override = skin
+	player.add_child(nose)
+
+	# Hoodie drawstrings and front pocket are subtle but visible at gameplay distance.
+	for side in [-1.0, 1.0]:
+		var string := MeshInstance3D.new()
+		var string_mesh := CylinderMesh.new()
+		string_mesh.top_radius = 0.012
+		string_mesh.bottom_radius = 0.012
+		string_mesh.height = 0.24
+		string.mesh = string_mesh
+		string.position = Vector3(side * 0.075, 1.27, -0.315)
+		string.material_override = _material(Color(0.72, 0.72, 0.68))
+		player.add_child(string)
+	var front_pocket := MeshInstance3D.new()
+	var front_pocket_mesh := SphereMesh.new()
+	front_pocket_mesh.radius = 0.17
+	front_pocket.mesh = front_pocket_mesh
+	front_pocket.scale = Vector3(1.55, 0.38, 0.20)
+	front_pocket.position = Vector3(0, 0.82, -0.31)
+	front_pocket.material_override = _material(Color(0.045, 0.062, 0.09))
+	player.add_child(front_pocket)
 
 	for side in [-1.0, 1.0]:
 		var leg := MeshInstance3D.new()
@@ -597,7 +792,7 @@ func _update_police(delta: float) -> void:
 		in_car = false
 		player.visible = true
 		active_car = car
-		player.global_position = Vector3(0, 1.0, 5)
+		player.global_position = Vector3(0, 0.0, 5)
 		car.global_position = Vector3(5, 0.75, 1)
 		_show_message("BUSTED. The police impounded your run and fined you $500. The package is safe — get back to the dealership.")
 		_update_hud()
@@ -785,16 +980,16 @@ func _set_intro_scene(index: int) -> void:
 	if not is_instance_valid(player):
 		return
 	if index <= 1:
-		player.global_position = Vector3(130, 1.0, 3.0)
+		player.global_position = Vector3(130, 0.0, 3.0)
 		prologue_manager.visible = true
 	elif index <= 3:
-		player.global_position = Vector3(150, 1.0, 3.0)
+		player.global_position = Vector3(150, 0.0, 3.0)
 		prologue_manager.visible = false
 	elif index == 4:
-		player.global_position = Vector3(170, 1.0, 3.0)
+		player.global_position = Vector3(170, 0.0, 3.0)
 		prologue_manager.visible = false
 	else:
-		player.global_position = Vector3(0, 1.0, 5.0)
+		player.global_position = Vector3(0, 0.0, 5.0)
 		prologue_manager.visible = false
 	player.velocity = Vector3.ZERO
 	camera_yaw = 0.0
@@ -1034,7 +1229,7 @@ func _animate_player(delta: float) -> void:
 		player_arms[i].rotation.x = lerp_angle(player_arms[i].rotation.x, swing, delta * 12.0)
 	if is_instance_valid(player_visual):
 		var bob := absf(sin(walk_time * 2.0)) * 0.045 if moving else 0.0
-		player_visual.position.y = lerpf(player_visual.position.y, 0.88 + bob, delta * 10.0)
+		player_visual.position.y = lerpf(player_visual.position.y, 1.06 + bob, delta * 10.0)
 
 func _drive_car(delta: float) -> void:
 	var vehicle: CharacterBody3D = active_car if is_instance_valid(active_car) else car
