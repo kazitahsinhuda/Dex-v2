@@ -24,6 +24,7 @@ func _run_tests() -> void:
 	game.cash = 2450
 	game.sales_completed = 0
 	game.stock_owned = false
+	game.stock_repaired = false
 	game.in_car = false
 	game.police_active = false
 	game.marcus.visible = true
