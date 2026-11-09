@@ -1,8 +1,9 @@
 extends Node3D
 
 const WALK_SPEED := 5.0
-const CAR_SPEED := 22.0
-const TURN_SPEED := 1.7
+const CAR_SPEED := 9.5
+const REVERSE_SPEED := 4.2
+const TURN_SPEED := 2.0
 
 var player: CharacterBody3D
 var player_visual: MeshInstance3D
@@ -13,6 +14,7 @@ var car: CharacterBody3D
 var active_car: CharacterBody3D
 var parked_cars: Array[CharacterBody3D] = []
 var generated_material_cache: Dictionary = {}
+var inheritance_letter: Node3D
 var camera: Camera3D
 var hud: Label
 var objective: Label
@@ -172,26 +174,7 @@ func _make_parked_car(pos: Vector3, paint: Color, facing: float) -> void:
 	cabin.position = Vector3(0, 0.62, -0.1)
 	cabin.material_override = _material(Color(0.055, 0.105, 0.14))
 	vehicle.add_child(cabin)
-	# Distinct glass, lights and bumpers make parked cars readable from the street.
-	_make_box("Parked front glass", Vector3(0, 0.92, -0.98), Vector3(1.30, 0.42, 0.06), Color(0.035, 0.085, 0.12, 0.92), vehicle)
-	_make_box("Parked rear glass", Vector3(0, 0.92, 0.78), Vector3(1.30, 0.42, 0.06), Color(0.035, 0.085, 0.12, 0.92), vehicle)
-	_make_box("Parked front bumper", Vector3(0, -0.16, -1.84), Vector3(1.86, 0.18, 0.12), Color(0.045, 0.05, 0.06), vehicle)
-	_make_box("Parked rear bumper", Vector3(0, -0.16, 1.84), Vector3(1.86, 0.18, 0.12), Color(0.045, 0.05, 0.06), vehicle)
-	for x in [-0.66, 0.66]:
-		_make_box("Parked headlight", Vector3(x, 0.12, -1.84), Vector3(0.34, 0.18, 0.06), Color(0.95, 0.85, 0.58), vehicle)
-		_make_box("Parked tail light", Vector3(x, 0.12, 1.84), Vector3(0.30, 0.18, 0.06), Color(0.72, 0.07, 0.045), vehicle)
-	for x in [-0.92, 0.92]:
-		for z in [-1.15, 1.15]:
-			var wheel := MeshInstance3D.new()
-			var wheel_mesh := CylinderMesh.new()
-			wheel_mesh.top_radius = 0.31
-			wheel_mesh.bottom_radius = 0.31
-			wheel_mesh.height = 0.2
-			wheel.mesh = wheel_mesh
-			wheel.rotation_degrees.z = 90
-			wheel.position = Vector3(x, -0.28, z)
-			wheel.material_override = _material(Color(0.02, 0.025, 0.03))
-			vehicle.add_child(wheel)
+	_build_car_visual(vehicle, paint, false)
 	add_child(vehicle)
 	parked_cars.append(vehicle)
 
@@ -328,10 +311,22 @@ func _textured_material(color: Color, style: String, frequency: float, uv_scale:
 	noise.fractal_gain = 0.48
 	var texture := NoiseTexture2D.new()
 	texture.noise = noise
-	texture.width = 256
-	texture.height = 256
+	texture.width = 384
+	texture.height = 384
 	texture.seamless = true
 	mat.albedo_texture = texture
+
+	# Fine surface relief: asphalt grain, concrete pores and wood grain catch light.
+	var normal_image := Image.create(128, 128, false, Image.FORMAT_RGBA8)
+	for py in range(128):
+		for px in range(128):
+			var nx := noise.get_noise_2d(float(px + 1), float(py)) - noise.get_noise_2d(float(px - 1), float(py))
+			var ny := noise.get_noise_2d(float(px), float(py + 1)) - noise.get_noise_2d(float(px), float(py - 1))
+			var normal := Vector3(-nx * 3.2, -ny * 3.2, 1.0).normalized()
+			normal_image.set_pixel(px, py, Color(normal.x * 0.5 + 0.5, normal.y * 0.5 + 0.5, normal.z * 0.5 + 0.5, 1.0))
+	mat.normal_enabled = true
+	mat.normal_texture = ImageTexture.create_from_image(normal_image)
+	mat.normal_scale = 0.38
 	generated_material_cache[cache_key] = mat
 	return mat
 
@@ -419,43 +414,123 @@ func _build_car() -> void:
 	collision.shape = shape
 	car.add_child(collision)
 
-	var chassis := MeshInstance3D.new()
-	var chassis_mesh := BoxMesh.new()
-	chassis_mesh.size = Vector3(2.0, 0.75, 4.0)
-	chassis.mesh = chassis_mesh
-	chassis.position.y = 0.05
-	chassis.material_override = _paint_material(Color(0.12, 0.19, 0.28))
-	car.add_child(chassis)
+	_build_car_visual(car, Color(0.12, 0.19, 0.28), true)
+	add_child(car)
+
+func _build_car_visual(vehicle: CharacterBody3D, paint: Color, starter: bool) -> void:
+	# Rounded ellipsoid body panels replace the old rectangular toy-car silhouette.
+	var body := MeshInstance3D.new()
+	var body_mesh := SphereMesh.new()
+	body_mesh.radius = 1.0
+	body_mesh.height = 2.0
+	body.mesh = body_mesh
+	body.scale = Vector3(0.98, 0.34, 1.92)
+	body.position.y = 0.02
+	body.material_override = _paint_material(paint)
+	vehicle.add_child(body)
+
+	var hood := MeshInstance3D.new()
+	var hood_mesh := SphereMesh.new()
+	hood_mesh.radius = 1.0
+	hood_mesh.height = 2.0
+	hood.mesh = hood_mesh
+	hood.scale = Vector3(0.91, 0.22, 0.72)
+	hood.position = Vector3(0, 0.17, -1.18)
+	hood.material_override = _paint_material(paint.lightened(0.035))
+	vehicle.add_child(hood)
+
+	var trunk := MeshInstance3D.new()
+	var trunk_mesh := SphereMesh.new()
+	trunk_mesh.radius = 1.0
+	trunk_mesh.height = 2.0
+	trunk.mesh = trunk_mesh
+	trunk.scale = Vector3(0.88, 0.20, 0.48)
+	trunk.position = Vector3(0, 0.17, 1.36)
+	trunk.material_override = _paint_material(paint.darkened(0.025))
+	vehicle.add_child(trunk)
 
 	var cabin := MeshInstance3D.new()
-	var cabin_mesh := BoxMesh.new()
-	cabin_mesh.size = Vector3(1.55, 0.72, 1.85)
+	var cabin_mesh := SphereMesh.new()
+	cabin_mesh.radius = 1.0
+	cabin_mesh.height = 2.0
 	cabin.mesh = cabin_mesh
-	cabin.position = Vector3(0, 0.65, -0.15)
-	cabin.material_override = _material(Color(0.16, 0.34, 0.43))
-	car.add_child(cabin)
+	cabin.scale = Vector3(0.70, 0.43, 0.91)
+	cabin.position = Vector3(0, 0.57, -0.08)
+	cabin.material_override = _material(Color(0.035, 0.075, 0.105))
+	vehicle.add_child(cabin)
 
-	# Windshield, rear glass, bumpers and headlights give the starter car a readable silhouette.
-	_make_box("Front windshield", Vector3(0, 1.02, -0.92), Vector3(1.38, 0.48, 0.07), Color(0.045, 0.10, 0.15, 0.92), car)
-	_make_box("Rear windshield", Vector3(0, 1.02, 0.70), Vector3(1.38, 0.48, 0.07), Color(0.045, 0.10, 0.15, 0.92), car)
-	_make_box("Front bumper", Vector3(0, -0.12, -2.02), Vector3(1.95, 0.22, 0.16), Color(0.055, 0.065, 0.075), car)
-	_make_box("Rear bumper", Vector3(0, -0.12, 2.02), Vector3(1.95, 0.22, 0.16), Color(0.055, 0.065, 0.075), car)
-	for x in [-0.68, 0.68]:
-		_make_box("Headlight", Vector3(x, 0.18, -2.03), Vector3(0.42, 0.22, 0.07), Color(0.96, 0.88, 0.63), car)
-		_make_box("Tail light", Vector3(x, 0.18, 2.03), Vector3(0.38, 0.22, 0.07), Color(0.68, 0.08, 0.055), car)
-	for x in [-1.0, 1.0]:
-		for z in [-1.25, 1.25]:
+	# Front and rear glass, mirrors, bumpers and lamps.
+	for side in [-1.0, 1.0]:
+		var window := MeshInstance3D.new()
+		var window_mesh := SphereMesh.new()
+		window_mesh.radius = 1.0
+		window_mesh.height = 2.0
+		window.mesh = window_mesh
+		window.scale = Vector3(0.035, 0.28, 0.66)
+		window.position = Vector3(side * 0.685, 0.62, -0.10)
+		window.material_override = _material(Color(0.08, 0.19, 0.24, 0.82))
+		vehicle.add_child(window)
+		var mirror := MeshInstance3D.new()
+		var mirror_mesh := SphereMesh.new()
+		mirror_mesh.radius = 0.12
+		mirror.mesh = mirror_mesh
+		mirror.scale = Vector3(1.3, 0.7, 0.65)
+		mirror.position = Vector3(side * 0.93, 0.53, -0.72)
+		mirror.material_override = _material(Color(0.045, 0.055, 0.065))
+		vehicle.add_child(mirror)
+		for z in [-1.20, 1.20]:
 			var wheel := MeshInstance3D.new()
 			var wheel_mesh := CylinderMesh.new()
-			wheel_mesh.top_radius = 0.36
-			wheel_mesh.bottom_radius = 0.36
-			wheel_mesh.height = 0.22
+			wheel_mesh.top_radius = 0.34
+			wheel_mesh.bottom_radius = 0.34
+			wheel_mesh.height = 0.24
 			wheel.mesh = wheel_mesh
 			wheel.rotation_degrees.z = 90
-			wheel.position = Vector3(x, -0.28, z)
-			wheel.material_override = _material(Color(0.025, 0.03, 0.035))
-			car.add_child(wheel)
-	add_child(car)
+			wheel.position = Vector3(side * 0.94, -0.25, z)
+			wheel.material_override = _material(Color(0.018, 0.022, 0.027))
+			vehicle.add_child(wheel)
+			var rim := MeshInstance3D.new()
+			var rim_mesh := CylinderMesh.new()
+			rim_mesh.top_radius = 0.18
+			rim_mesh.bottom_radius = 0.18
+			rim_mesh.height = 0.255
+			rim.mesh = rim_mesh
+			rim.rotation_degrees.z = 90
+			rim.position = Vector3(side * 0.94, -0.25, z)
+			rim.material_override = _material(Color(0.48, 0.52, 0.56))
+			vehicle.add_child(rim)
+
+	for side in [-0.65, 0.65]:
+		var headlight := MeshInstance3D.new()
+		var light_mesh := SphereMesh.new()
+		headlight.mesh = light_mesh
+		headlight.scale = Vector3(0.18, 0.10, 0.055)
+		headlight.position = Vector3(side, 0.13, -1.87)
+		headlight.material_override = _material(Color(1.0, 0.88, 0.60))
+		vehicle.add_child(headlight)
+		var taillight := MeshInstance3D.new()
+		var tail_mesh := SphereMesh.new()
+		taillight.mesh = tail_mesh
+		taillight.scale = Vector3(0.15, 0.09, 0.05)
+		taillight.position = Vector3(side, 0.12, 1.87)
+		taillight.material_override = _material(Color(0.78, 0.035, 0.025))
+		vehicle.add_child(taillight)
+
+	var front_bumper := MeshInstance3D.new()
+	var bumper_mesh := SphereMesh.new()
+	bumper_mesh.radius = 1.0
+	bumper_mesh.height = 2.0
+	front_bumper.mesh = bumper_mesh
+	front_bumper.scale = Vector3(0.92, 0.075, 0.12)
+	front_bumper.position = Vector3(0, -0.13, -1.88)
+	front_bumper.material_override = _material(Color(0.055, 0.06, 0.07))
+	vehicle.add_child(front_bumper)
+	var rear_bumper := MeshInstance3D.new()
+	rear_bumper.mesh = bumper_mesh
+	rear_bumper.scale = Vector3(0.92, 0.075, 0.12)
+	rear_bumper.position = Vector3(0, -0.13, 1.88)
+	rear_bumper.material_override = _material(Color(0.055, 0.06, 0.07))
+	vehicle.add_child(rear_bumper)
 
 func _build_police_car() -> void:
 	police_car = CharacterBody3D.new()
@@ -538,6 +613,26 @@ func _update_police(delta: float) -> void:
 		_update_hud()
 
 func _build_story_characters() -> void:
+	inheritance_letter = Node3D.new()
+	inheritance_letter.name = "Letter from the solicitor"
+	inheritance_letter.position = Vector3(0, 1.43, -1.18)
+	var envelope := MeshInstance3D.new()
+	var envelope_mesh := BoxMesh.new()
+	envelope_mesh.size = Vector3(0.72, 0.035, 0.48)
+	envelope.mesh = envelope_mesh
+	envelope.material_override = _material(Color(0.88, 0.80, 0.62))
+	inheritance_letter.add_child(envelope)
+	var seal := MeshInstance3D.new()
+	var seal_mesh := SphereMesh.new()
+	seal_mesh.radius = 0.075
+	seal.mesh = seal_mesh
+	seal.scale = Vector3(1.0, 0.25, 1.0)
+	seal.position = Vector3(0, 0.035, 0)
+	seal.material_override = _material(Color(0.58, 0.12, 0.10))
+	inheritance_letter.add_child(seal)
+	inheritance_letter.visible = false
+	add_child(inheritance_letter)
+
 	marcus = Node3D.new()
 	marcus.name = "Marcus Vale"
 	marcus.position = Vector3(28, 0, -30)
@@ -957,11 +1052,25 @@ func _drive_car(delta: float) -> void:
 		steering -= 1.0
 	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
 		steering += 1.0
-	var speed_factor: float = clampf(absf(throttle), 0.0, 1.0)
-	vehicle.rotation.y -= steering * TURN_SPEED * delta * max(speed_factor, 0.25) * sign(throttle if throttle != 0.0 else 1.0)
+	throttle = clampf(throttle, -1.0, 1.0)
+	steering = clampf(steering, -1.0, 1.0)
+
 	var forward_dir := -vehicle.global_transform.basis.z
-	vehicle.velocity.x = forward_dir.x * throttle * CAR_SPEED
-	vehicle.velocity.z = forward_dir.z * throttle * CAR_SPEED
+	var forward_speed := vehicle.velocity.dot(forward_dir)
+	var target_speed := throttle * CAR_SPEED if throttle >= 0.0 else throttle * REVERSE_SPEED
+	var acceleration := 6.5
+	if throttle != 0.0 and forward_speed * throttle < -0.1:
+		acceleration = 14.0 # Brakes first, then engages reverse.
+	elif throttle == 0.0:
+		acceleration = 3.2 # Natural rolling resistance instead of instant stopping.
+	forward_speed = move_toward(forward_speed, target_speed, acceleration * delta)
+
+	# Steering only changes heading while the car is actually rolling.
+	var speed_ratio := clampf(absf(forward_speed) / 3.0, 0.0, 1.0)
+	vehicle.rotation.y -= steering * TURN_SPEED * delta * speed_ratio * sign(forward_speed if absf(forward_speed) > 0.05 else 1.0)
+	forward_dir = -vehicle.global_transform.basis.z
+	vehicle.velocity.x = forward_dir.x * forward_speed
+	vehicle.velocity.z = forward_dir.z * forward_speed
 	vehicle.velocity.y = 0.0
 	vehicle.move_and_slide()
 
@@ -1038,7 +1147,7 @@ func _interact() -> void:
 		_update_hud()
 		return
 
-	if mission_stage >= 4 and stock_owned and player_pos.distance_to(repair_bay_position) < 3.8:
+	if stock_owned and player_pos.distance_to(repair_bay_position) < 3.8:
 		if not stock_repaired:
 			if cash >= 250:
 				cash -= 250
@@ -1055,14 +1164,29 @@ func _interact() -> void:
 	var desk_pos := Vector3(0, 0, -1.2)
 	if player_pos.distance_to(desk_pos) < 4.5:
 		if mission_stage == 0:
-			mission_stage = 1
-			first_deal_done = true
-			_show_message("The folder contains an old ledger and a note: 'Ask Marcus what happened to your father.' His last known location is the old freight yard.")
+			if not stock_owned and cash >= 1200:
+				cash -= 1200
+				stock_owned = true
+				stock_repaired = false
+				_show_message("FIRST TRADE-IN: You bought a neglected hatchback for $1,200. Take it to the garage workshop for repairs ($250), then bring it back here to sell.")
+			elif stock_owned and stock_repaired:
+				cash += 1950
+				stock_owned = false
+				stock_repaired = false
+				sales_completed = maxi(sales_completed, 1)
+				mission_stage = 1
+				first_deal_done = true
+				if is_instance_valid(inheritance_letter):
+					inheritance_letter.visible = true
+				_show_message("FIRST SALE CLOSED. +$1,950. As you clear the old paperwork, you find a sealed letter addressed to Alex Carter. It is from a lawyer — and it mentions your missing father.")
+			elif stock_owned:
+				_show_message("The hatchback still needs repairs. Take it to the workshop before trying to sell it.")
+			else:
+				_show_message("You need $1,200 to buy your first trade-in. Check the dealership funds.")
 		elif mission_stage == 3:
 			mission_stage = 4
 			cash += 2500
-			sales_completed += 1
-			_show_message("CHAPTER 1 COMPLETE. You returned with the ledger. The numbers reveal your father was paying someone to keep the dealership alive. +$2,500.")
+			_show_message("CHAPTER 1 COMPLETE. You returned with the package. The numbers reveal your father was paying someone to keep the dealership alive. +$2,500.")
 		elif mission_stage == 7:
 			mission_stage = 8
 			marcus.visible = true
@@ -1218,7 +1342,9 @@ func _update_mission_marker() -> void:
 	if not is_instance_valid(mission_marker):
 		return
 	match mission_stage:
-		0, 3, 7, 10:
+		0:
+			mission_marker.global_position = repair_bay_position + Vector3(0, 0.12, 0) if stock_owned and not stock_repaired else Vector3(0, 0.12, -1.2)
+		3, 7, 10:
 			mission_marker.global_position = Vector3(0, 0.12, -1.2)
 		1, 8:
 			mission_marker.global_position = Vector3(28, 0.12, -30)
@@ -1237,7 +1363,7 @@ func _update_mission_marker() -> void:
 
 func _save_game() -> void:
 	var data := ConfigFile.new()
-	data.set_value("career", "save_version", 2)
+	data.set_value("career", "save_version", 3)
 	data.set_value("career", "mission_stage", mission_stage)
 	data.set_value("career", "cash", cash)
 	data.set_value("career", "sales_completed", sales_completed)
@@ -1251,7 +1377,7 @@ func _load_game() -> void:
 		# Older prototype saves could skip the new opening and drop the player
 		# straight into the dealership. Start those saves cleanly once.
 		var save_version := int(data.get_value("career", "save_version", 0))
-		if save_version < 2:
+		if save_version < 3:
 			mission_stage = 0
 			cash = 2450
 			sales_completed = 0
@@ -1267,6 +1393,8 @@ func _load_game() -> void:
 	first_deal_done = mission_stage >= 1
 	if is_instance_valid(marcus):
 		marcus.visible = mission_stage == 1 or mission_stage == 8 or mission_stage == 11
+	if is_instance_valid(inheritance_letter):
+		inheritance_letter.visible = mission_stage >= 1
 	if is_instance_valid(detective):
 		detective.visible = mission_stage == 11
 	if is_instance_valid(package_crate):
@@ -1281,9 +1409,14 @@ func _update_hud() -> void:
 	hud.text = "WESTBRIDGE MOTORS     $%s     |     SALES %s" % [str(cash), str(sales_completed)]
 	match mission_stage:
 		0:
-			objective.text = "MISSION 01  |  Find the folder on the reception desk."
+			if not stock_owned:
+				objective.text = "FIRST SALE  |  Buy a $1,200 trade-in at the reception desk."
+			elif not stock_repaired:
+				objective.text = "FIRST SALE  |  Repair your trade-in at the workshop ($250)."
+			else:
+				objective.text = "FIRST SALE  |  Return to reception and sell the repaired car."
 		1:
-			objective.text = "MISSION 01  |  Meet Marcus Vale at the old freight yard."
+			objective.text = "THE LETTER  |  Meet Marcus Vale at the old freight yard."
 		2:
 			objective.text = "MISSION 01  |  Retrieve the sealed package from the warehouse."
 		3:
