@@ -16,7 +16,9 @@ A 3D, story-driven dealership and underworld simulator for Android, built with G
 - Explore Westbridge on foot in third person.
 - Live Westbridge minimap shows the player's position, mission waypoint, and both destinations during the final choice.
 - Parked street cars are enterable and drivable; tap INTERACT beside a car to enter and again to exit.
-- Roads, grass, building facades, showroom surfaces, garage concrete, and prologue interiors use generated color and normal maps for visible surface relief. Vehicle bodies use rounded panels, curved glass, mirrors, wheel rims, lamps, and metallic paint.
+- The player is a layered streetwear character with rounded hoodie, denim, limbs, shoes, hair, and face details; the collision capsule is aligned to ground level instead of leaving Alex hovering above it.
+- The world now includes authored 1024px seamless SVG texture tiles for grass, asphalt, concrete, fabric, denim, wood, metal, and plaster, plus generated normal detail. Streets have pavements, kerbs, lane markings, drains, and asphalt repairs; buildings have window grids, frames, ledges, entrances, and sign bands.
+- Vehicle bodies use rounded panels, curved glass, mirrors, wheel rims, lamps, and metallic paint.
 - Saves from earlier prototype builds are migrated once to a fresh story start so the new prologue is not skipped; current-version campaign saves are preserved.
 - Enter and drive the starter car; acceleration builds gradually, reverse is slower, coasting has rolling resistance, and steering depends on actual road speed.
 - Hold the D-pad buttons to move; hold RUN to sprint.
@@ -31,4 +33,4 @@ Godot 4.3, Compatibility renderer, Android arm64-v8a.
 
 The GitHub Actions workflow imports the project, runs a headless gameplay smoke test, runs campaign and dealership progression assertions, exports a signed debug APK, and verifies its signature, package ID, app label, and archive integrity.
 
-Visuals currently use original Godot primitives and low-poly geometry. Device runtime, touch behavior, and the quality/availability of installed Android voices still require real-phone validation; a successful CI build does not prove those device behaviors.
+The world still uses a stylised low-poly layout rather than a photorealistic imported 3D city, but the player and surface materials are no longer the original box-and-flat-color placeholders. Device runtime, touch behavior, and the quality/availability of installed Android voices still require real-phone validation; a successful CI build does not prove those device behaviors.
