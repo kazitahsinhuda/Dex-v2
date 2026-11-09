@@ -50,7 +50,8 @@ func _run_tests() -> void:
 
 	if not _check(game.parked_cars.size() >= 4, "Street vehicles should be enterable CharacterBody3D cars."):
 		return
-	if not _check(game._world_material("Main road", Color(0.07, 0.08, 0.1)).albedo_texture != null, "Roads should use generated surface textures."):
+	var road_material: StandardMaterial3D = game._world_material("Main road", Color(0.07, 0.08, 0.1))
+	if not _check(road_material.albedo_texture != null and road_material.normal_enabled and road_material.normal_texture != null, "Roads should have generated color and surface-normal textures."):
 		return
 	var shared_material_a: StandardMaterial3D = game._textured_material(Color(0.2, 0.2, 0.2), "cache_test", 0.05, 2.0)
 	var shared_material_b: StandardMaterial3D = game._textured_material(Color(0.2, 0.2, 0.2), "cache_test", 0.05, 2.0)
@@ -80,9 +81,34 @@ func _run_tests() -> void:
 		return
 
 	game.player.global_position = Vector3(0, 1, -1.2)
-	game._interact()
-	if not _check(game.mission_stage == 1, "Desk interaction should start the story."):
+	if not _check(not game.inheritance_letter.visible, "The father's letter must remain hidden before the first sale."):
 		return
+	game._interact()
+	if not _check(game.mission_stage == 0 and game.stock_owned and game.cash == 1250, "The first desk visit should buy the initial trade-in, not reveal the letter."):
+		return
+	game.player.global_position = game.repair_bay_position
+	game._interact()
+	if not _check(game.stock_repaired and game.cash == 1000, "The first trade-in should be repairable before any story letter appears."):
+		return
+	game.player.global_position = Vector3(0, 1, -1.2)
+	game._interact()
+	if not _check(game.mission_stage == 1 and game.sales_completed == 1 and game.inheritance_letter.visible, "The letter should appear only after the first completed sale."):
+		return
+	if not _check(game.cash == 2950, "The first repaired sale should leave $2,950."):
+		return
+
+	# The steering input must not spin a stationary car, and acceleration must be gradual.
+	game.held["left"] = true
+	var stopped_rotation: float = game.car.rotation.y
+	game._drive_car(0.5)
+	if not _check(is_equal_approx(game.car.rotation.y, stopped_rotation), "A stationary car must not rotate in place."):
+		return
+	game.held["left"] = false
+	game.held["forward"] = true
+	game._drive_car(0.5)
+	if not _check(game.car.velocity.length() < 5.0, "Car acceleration should build progressively rather than jump to racing speed."):
+		return
+	game.held["forward"] = false
 
 	game.player.global_position = Vector3(28, 0, -30)
 	game._interact()
@@ -95,7 +121,7 @@ func _run_tests() -> void:
 		return
 	if not _check(game.police_active, "Collecting the package should trigger the police pursuit."):
 		return
-	if not _check(game.cash == 3200, "Package reward should add $750."):
+	if not _check(game.cash == 3700, "Package reward should add $750 after the first sale."):
 		return
 
 	game.police_active = false
@@ -104,7 +130,7 @@ func _run_tests() -> void:
 	game._interact()
 	if not _check(game.mission_stage == 4, "Returning to the dealership should complete chapter one."):
 		return
-	if not _check(game.cash == 5700, "Chapter completion should add $2,500."):
+	if not _check(game.cash == 6200, "Chapter completion should add $2,500."):
 		return
 
 	# First additional sale: buy, repair at the workshop, then sell.
