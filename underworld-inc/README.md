@@ -8,13 +8,13 @@ A 3D, story-driven dealership and underworld simulator for Android, built with G
 - Chapter 1: investigate the abandoned dealership, meet Marcus Vale, recover the freight-yard package, and escape a police pursuit.
 - Dealership career: buy trade-ins for $1,200 and sell for $1,950. Two additional profitable sales unlock the next story chapter.
 - Chapter 2: work with mechanic Lena Ortiz, recover the service file from a storage yard, and escape a second police pursuit.
-- Chapter 3: confront Marcus, recover the original records-depot ledger, and return to the dealership for the campaign finale.
+- Chapter 3: confront Marcus, recover the original records-depot ledger, then choose an ending: expose the network with Detective Reed or join Marcus and take control of it.
 - Post-campaign free play: continue buying and selling trade-ins and grow the dealership.
 
 ## World and controls
 
 - Explore Westbridge on foot in third person.
-- Live Westbridge minimap shows the player's position and current mission waypoint.
+- Live Westbridge minimap shows the player's position, mission waypoint, and both destinations during the final choice.
 - Enter and drive the starter car; accelerate, reverse, and steer with the on-screen D-pad.
 - Hold the D-pad buttons to move; hold RUN to sprint.
 - INTERACT advances the prologue, talks to characters, collects mission evidence, and operates the dealership/workshop.
