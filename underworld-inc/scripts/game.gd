@@ -10,6 +10,8 @@ var player_legs: Array[MeshInstance3D] = []
 var player_arms: Array[MeshInstance3D] = []
 var walk_time := 0.0
 var car: CharacterBody3D
+var active_car: CharacterBody3D
+var parked_cars: Array[CharacterBody3D] = []
 var camera: Camera3D
 var hud: Label
 var objective: Label
@@ -63,6 +65,7 @@ func _ready() -> void:
 	_build_world()
 	_build_player()
 	_build_car()
+	active_car = car
 	_build_police_car()
 	_build_story_characters()
 	_build_prologue_stage()
@@ -145,15 +148,21 @@ func _build_world() -> void:
 	_make_pedestrian(Vector3(-36, 0, -18), Color(0.20, 0.37, 0.27))
 
 func _make_parked_car(pos: Vector3, paint: Color, facing: float) -> void:
-	var vehicle := Node3D.new()
+	var vehicle := CharacterBody3D.new()
+	vehicle.name = "Parked vehicle"
 	vehicle.position = pos
+	var collision := CollisionShape3D.new()
+	var collision_shape := BoxShape3D.new()
+	collision_shape.size = Vector3(2.0, 1.15, 3.9)
+	collision.shape = collision_shape
+	vehicle.add_child(collision)
 	vehicle.rotation.y = facing
 	var body := MeshInstance3D.new()
 	var body_mesh := BoxMesh.new()
 	body_mesh.size = Vector3(1.8, 0.65, 3.6)
 	body.mesh = body_mesh
 	body.position.y = 0.0
-	body.material_override = _material(paint)
+	body.material_override = _paint_material(paint)
 	vehicle.add_child(body)
 	var cabin := MeshInstance3D.new()
 	var cabin_mesh := BoxMesh.new()
@@ -175,6 +184,7 @@ func _make_parked_car(pos: Vector3, paint: Color, facing: float) -> void:
 			wheel.material_override = _material(Color(0.02, 0.025, 0.03))
 			vehicle.add_child(wheel)
 	add_child(vehicle)
+	parked_cars.append(vehicle)
 
 func _make_pedestrian(pos: Vector3, clothing: Color) -> void:
 	var person := Node3D.new()
@@ -235,7 +245,7 @@ func _make_box(label_text: String, pos: Vector3, size: Vector3, color: Color, pa
 	box.size = size
 	mesh_instance.mesh = box
 	mesh_instance.position = pos
-	mesh_instance.material_override = _material(color)
+	mesh_instance.material_override = _world_material(label_text, color)
 	parent.add_child(mesh_instance)
 	return mesh_instance
 
@@ -393,7 +403,7 @@ func _build_car() -> void:
 	chassis_mesh.size = Vector3(2.0, 0.75, 4.0)
 	chassis.mesh = chassis_mesh
 	chassis.position.y = 0.05
-	chassis.material_override = _material(Color(0.12, 0.19, 0.28))
+	chassis.material_override = _paint_material(Color(0.12, 0.19, 0.28))
 	car.add_child(chassis)
 
 	var cabin := MeshInstance3D.new()
@@ -476,7 +486,7 @@ func _update_police(delta: float) -> void:
 		var bar := police_car.get_node_or_null("Lightbar") as MeshInstance3D
 		if bar:
 			bar.material_override = _material(Color(0.12, 0.28, 0.95) if int(Time.get_ticks_msec() / 350) % 2 == 0 else Color(0.95, 0.08, 0.06))
-	var target: Node3D = car if in_car else player
+	var target: Node3D = active_car if in_car and is_instance_valid(active_car) else player
 	var chase := target.global_position - police_car.global_position
 	chase.y = 0.0
 	var distance := chase.length()
@@ -493,6 +503,7 @@ func _update_police(delta: float) -> void:
 		cash = maxi(0, cash - 500)
 		in_car = false
 		player.visible = true
+		active_car = car
 		player.global_position = Vector3(0, 1.0, 5)
 		car.global_position = Vector3(5, 0.75, 1)
 		_show_message("BUSTED. The police impounded your run and fined you $500. The package is safe — get back to the dealership.")
@@ -778,7 +789,7 @@ func _build_minimap(root: Control) -> void:
 func _update_minimap() -> void:
 	if not is_instance_valid(minimap_panel) or not is_instance_valid(player):
 		return
-	var player_pos: Vector3 = car.global_position if in_car else player.global_position
+	var player_pos: Vector3 = active_car.global_position if in_car and is_instance_valid(active_car) else player.global_position
 	minimap_player.position = Vector2(
 		clampf(5.0 + (player_pos.x + 50.0) * 1.8, 5.0, 176.0),
 		clampf(20.0 + (player_pos.z + 60.0) * 1.3, 20.0, 132.0)
@@ -914,6 +925,7 @@ func _animate_player(delta: float) -> void:
 		player_visual.position.y = lerpf(player_visual.position.y, 0.88 + bob, delta * 10.0)
 
 func _drive_car(delta: float) -> void:
+	var vehicle: CharacterBody3D = active_car if is_instance_valid(active_car) else car
 	var throttle := float(held.get("forward", false)) - float(held.get("back", false))
 	var steering := float(held.get("right", false)) - float(held.get("left", false))
 	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
@@ -925,15 +937,15 @@ func _drive_car(delta: float) -> void:
 	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
 		steering += 1.0
 	var speed_factor: float = clampf(absf(throttle), 0.0, 1.0)
-	car.rotation.y -= steering * TURN_SPEED * delta * max(speed_factor, 0.25) * sign(throttle if throttle != 0.0 else 1.0)
-	var forward_dir := -car.global_transform.basis.z
-	car.velocity.x = forward_dir.x * throttle * CAR_SPEED
-	car.velocity.z = forward_dir.z * throttle * CAR_SPEED
-	car.velocity.y = 0.0
-	car.move_and_slide()
+	vehicle.rotation.y -= steering * TURN_SPEED * delta * max(speed_factor, 0.25) * sign(throttle if throttle != 0.0 else 1.0)
+	var forward_dir := -vehicle.global_transform.basis.z
+	vehicle.velocity.x = forward_dir.x * throttle * CAR_SPEED
+	vehicle.velocity.z = forward_dir.z * throttle * CAR_SPEED
+	vehicle.velocity.y = 0.0
+	vehicle.move_and_slide()
 
 func _follow_camera(delta: float) -> void:
-	var target: Node3D = car if in_car else player
+	var target: Node3D = active_car if in_car and is_instance_valid(active_car) else player
 	var distance := 9.0 if in_car else 7.0
 	var height := 4.0 if in_car else 3.4
 	# Keep the third-person camera behind the player without orbiting when
@@ -977,18 +989,31 @@ func _interact() -> void:
 		_advance_intro()
 		return
 	if in_car:
+		var exiting_vehicle: CharacterBody3D = active_car if is_instance_valid(active_car) else car
 		in_car = false
-		player.global_position = car.global_position + car.global_transform.basis.x * 2.2 + Vector3(0, 0.2, 0)
+		player.global_position = exiting_vehicle.global_position + exiting_vehicle.global_transform.basis.x * 2.2 + Vector3(0, 0.2, 0)
 		player.visible = true
+		active_car = car
 		_show_message("You stepped out. Westbridge is yours to explore.")
 		_update_hud()
 		return
 
 	var player_pos := player.global_position
-	if player_pos.distance_to(car.global_position) < 4.5 and mission_stage >= 1:
+	var nearest_vehicle: CharacterBody3D = null
+	var nearest_distance := 4.5
+	if player_pos.distance_to(car.global_position) < nearest_distance:
+		nearest_vehicle = car
+		nearest_distance = player_pos.distance_to(car.global_position)
+	for vehicle in parked_cars:
+		var distance_to_vehicle: float = player_pos.distance_to(vehicle.global_position)
+		if distance_to_vehicle < nearest_distance:
+			nearest_vehicle = vehicle
+			nearest_distance = distance_to_vehicle
+	if nearest_vehicle != null:
+		active_car = nearest_vehicle
 		in_car = true
 		player.visible = false
-		_show_message("TEST DRIVE — ▲ accelerate, ▼ brake/reverse, ◀ ▶ steer. Hold RUN for a faster drive.")
+		_show_message("VEHICLE ENTERED — ▲ accelerate, ▼ brake/reverse, ◀ ▶ steer. Tap INTERACT to exit.")
 		_update_hud()
 		return
 
