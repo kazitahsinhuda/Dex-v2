@@ -14,6 +14,9 @@ var camera: Camera3D
 var hud: Label
 var objective: Label
 var message: Label
+var minimap_player: ColorRect
+var minimap_target: ColorRect
+var minimap_panel: ColorRect
 var held: Dictionary = {}
 var in_car := false
 var first_deal_done := false
@@ -611,6 +614,7 @@ func _build_ui() -> void:
 	message.add_theme_font_size_override("font_size", 17)
 	message.add_theme_color_override("font_color", Color(0.91, 0.94, 1.0))
 	root.add_child(message)
+	_build_minimap(root)
 
 	_add_touch_button(root, "▲", "forward", Vector2(88, -190), false)
 	_add_touch_button(root, "◀", "left", Vector2(24, -126), false)
@@ -618,6 +622,65 @@ func _build_ui() -> void:
 	_add_touch_button(root, "▶", "right", Vector2(152, -126), false)
 	_add_touch_button(root, "INTERACT", "interact", Vector2(-164, -132), true)
 	_add_touch_button(root, "RUN", "run", Vector2(-164, -64), true)
+
+func _build_minimap(root: Control) -> void:
+	minimap_panel = ColorRect.new()
+	minimap_panel.name = "WestbridgeMinimap"
+	minimap_panel.color = Color(0.035, 0.055, 0.075, 0.88)
+	minimap_panel.size = Vector2(190, 145)
+	minimap_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	minimap_panel.position = Vector2(-210, 18)
+	minimap_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(minimap_panel)
+
+	var title := Label.new()
+	title.text = "WESTBRIDGE  |  N"
+	title.position = Vector2(8, 4)
+	title.add_theme_font_size_override("font_size", 11)
+	title.add_theme_color_override("font_color", Color(0.85, 0.88, 0.92))
+	minimap_panel.add_child(title)
+
+	var horizontal_road := ColorRect.new()
+	horizontal_road.position = Vector2(5, 115)
+	horizontal_road.size = Vector2(180, 5)
+	horizontal_road.color = Color(0.25, 0.29, 0.33)
+	minimap_panel.add_child(horizontal_road)
+	var vertical_road := ColorRect.new()
+	vertical_road.position = Vector2(50, 20)
+	vertical_road.size = Vector2(5, 118)
+	vertical_road.color = Color(0.25, 0.29, 0.33)
+	minimap_panel.add_child(vertical_road)
+	var cross_road := ColorRect.new()
+	cross_road.position = Vector2(5, 70)
+	cross_road.size = Vector2(180, 4)
+	cross_road.color = Color(0.18, 0.22, 0.26)
+	minimap_panel.add_child(cross_road)
+
+	minimap_target = ColorRect.new()
+	minimap_target.size = Vector2(9, 9)
+	minimap_target.color = Color(1.0, 0.72, 0.18)
+	minimap_panel.add_child(minimap_target)
+	minimap_player = ColorRect.new()
+	minimap_player.size = Vector2(8, 8)
+	minimap_player.color = Color(0.28, 0.9, 0.62)
+	minimap_panel.add_child(minimap_player)
+	_update_minimap()
+
+func _update_minimap() -> void:
+	if not is_instance_valid(minimap_panel) or not is_instance_valid(player):
+		return
+	var player_pos: Vector3 = car.global_position if in_car else player.global_position
+	minimap_player.position = Vector2(
+		clampf(5.0 + (player_pos.x + 50.0) * 1.8, 5.0, 176.0),
+		clampf(20.0 + (player_pos.z + 60.0) * 1.3, 20.0, 132.0)
+	)
+	minimap_target.visible = is_instance_valid(mission_marker) and mission_marker.visible
+	if minimap_target.visible:
+		var target_pos: Vector3 = mission_marker.global_position
+		minimap_target.position = Vector2(
+			clampf(5.0 + (target_pos.x + 50.0) * 1.8, 5.0, 176.0),
+			clampf(20.0 + (target_pos.z + 60.0) * 1.3, 20.0, 132.0)
+		)
 
 func _add_touch_button(root: Control, caption: String, action: String, pos: Vector2, right_side: bool) -> void:
 	var button := Button.new()
@@ -655,7 +718,7 @@ func _input(event: InputEvent) -> void:
 		if touch_points.has(drag.index):
 			var previous: Vector2 = touch_last.get(drag.index, drag.position)
 			var origin: Vector2 = touch_points[drag.index]
-			if origin.x > view_size.x * 0.42 and origin.y < view_size.y - 225.0:
+			if origin.x > view_size.x * 0.42 and origin.y < view_size.y - 225.0 and not (origin.x > view_size.x - 220.0 and origin.y < 175.0):
 				camera_yaw -= (drag.position.x - previous.x) * 0.008
 				camera_pitch = clampf(camera_pitch + (drag.position.y - previous.y) * 0.004, -0.18, 0.55)
 			touch_last[drag.index] = drag.position
@@ -678,6 +741,7 @@ func _process(delta: float) -> void:
 		save_timer = 0.0
 		_save_game()
 	_follow_camera(delta)
+	_update_minimap()
 
 func _physics_process(delta: float) -> void:
 	if in_car:
