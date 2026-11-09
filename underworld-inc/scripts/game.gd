@@ -501,7 +501,7 @@ func _build_story_characters() -> void:
 
 	evidence_case = Node3D.new()
 	evidence_case.name = "Father Evidence Case"
-	evidence_case.position = Vector3(38, 0, -30)
+	evidence_case.position = Vector3(30, 0, -26)
 	var case_mesh := MeshInstance3D.new()
 	var case_box := BoxMesh.new()
 	case_box.size = Vector3(1.0, 0.7, 0.65)
@@ -659,11 +659,6 @@ func _input(event: InputEvent) -> void:
 				camera_yaw -= (drag.position.x - previous.x) * 0.008
 				camera_pitch = clampf(camera_pitch + (drag.position.y - previous.y) * 0.004, -0.18, 0.55)
 			touch_last[drag.index] = drag.position
-	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		# Also allow desktop testing with a click on the visible INTERACT area.
-		var p: Vector2 = event.position
-		if p.x > view_size.x - 310.0 and p.y > view_size.y - 205.0 and p.y < view_size.y - 85.0:
-			_interact()
 
 func _process(delta: float) -> void:
 	if message_timer > 0.0:
@@ -984,16 +979,14 @@ func _load_game() -> void:
 		sales_completed = int(data.get_value("career", "sales_completed", 0))
 		stock_owned = bool(data.get_value("career", "stock_owned", false))
 	first_deal_done = mission_stage >= 1
-	if mission_stage >= 2 and is_instance_valid(marcus):
-		marcus.visible = false
-	if mission_stage >= 3 and is_instance_valid(package_crate):
-		package_crate.visible = false
-	if mission_stage >= 6 and is_instance_valid(lena):
-		lena.visible = false
-	if mission_stage >= 7 and is_instance_valid(evidence_case):
-		evidence_case.visible = mission_stage == 9
-	if mission_stage >= 9 and is_instance_valid(marcus):
-		marcus.visible = false
+	if is_instance_valid(marcus):
+		marcus.visible = mission_stage == 1 or mission_stage == 8
+	if is_instance_valid(package_crate):
+		package_crate.visible = mission_stage == 2
+	if is_instance_valid(lena):
+		lena.visible = mission_stage == 5
+	if is_instance_valid(evidence_case):
+		evidence_case.visible = mission_stage == 6 or mission_stage == 9
 	_update_mission_marker()
 
 func _update_hud() -> void:
