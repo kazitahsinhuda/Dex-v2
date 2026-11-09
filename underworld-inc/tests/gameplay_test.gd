@@ -52,8 +52,8 @@ func _run_tests() -> void:
 		return
 	if not _check(game._world_material("Main road", Color(0.07, 0.08, 0.1)).albedo_texture != null, "Roads should use generated surface textures."):
 		return
-	var shared_material_a := game._textured_material(Color(0.2, 0.2, 0.2), "cache_test", 0.05, 2.0)
-	var shared_material_b := game._textured_material(Color(0.2, 0.2, 0.2), "cache_test", 0.05, 2.0)
+	var shared_material_a: StandardMaterial3D = game._textured_material(Color(0.2, 0.2, 0.2), "cache_test", 0.05, 2.0)
+	var shared_material_b: StandardMaterial3D = game._textured_material(Color(0.2, 0.2, 0.2), "cache_test", 0.05, 2.0)
 	if not _check(shared_material_a == shared_material_b, "Procedural materials should be reused instead of duplicated."):
 		return
 	game._set_intro_scene(0)
