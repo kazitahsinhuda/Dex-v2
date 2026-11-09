@@ -12,6 +12,7 @@ var walk_time := 0.0
 var car: CharacterBody3D
 var active_car: CharacterBody3D
 var parked_cars: Array[CharacterBody3D] = []
+var generated_material_cache: Dictionary = {}
 var camera: Camera3D
 var hud: Label
 var objective: Label
@@ -169,8 +170,16 @@ func _make_parked_car(pos: Vector3, paint: Color, facing: float) -> void:
 	cabin_mesh.size = Vector3(1.42, 0.72, 1.75)
 	cabin.mesh = cabin_mesh
 	cabin.position = Vector3(0, 0.62, -0.1)
-	cabin.material_override = _material(Color(0.07, 0.14, 0.19))
+	cabin.material_override = _material(Color(0.055, 0.105, 0.14))
 	vehicle.add_child(cabin)
+	# Distinct glass, lights and bumpers make parked cars readable from the street.
+	_make_box("Parked front glass", Vector3(0, 0.92, -0.98), Vector3(1.30, 0.42, 0.06), Color(0.035, 0.085, 0.12, 0.92), vehicle)
+	_make_box("Parked rear glass", Vector3(0, 0.92, 0.78), Vector3(1.30, 0.42, 0.06), Color(0.035, 0.085, 0.12, 0.92), vehicle)
+	_make_box("Parked front bumper", Vector3(0, -0.16, -1.84), Vector3(1.86, 0.18, 0.12), Color(0.045, 0.05, 0.06), vehicle)
+	_make_box("Parked rear bumper", Vector3(0, -0.16, 1.84), Vector3(1.86, 0.18, 0.12), Color(0.045, 0.05, 0.06), vehicle)
+	for x in [-0.66, 0.66]:
+		_make_box("Parked headlight", Vector3(x, 0.12, -1.84), Vector3(0.34, 0.18, 0.06), Color(0.95, 0.85, 0.58), vehicle)
+		_make_box("Parked tail light", Vector3(x, 0.12, 1.84), Vector3(0.30, 0.18, 0.06), Color(0.72, 0.07, 0.045), vehicle)
 	for x in [-0.92, 0.92]:
 		for z in [-1.15, 1.15]:
 			var wheel := MeshInstance3D.new()
@@ -279,8 +288,14 @@ func _world_material(label_text: String, color: Color) -> StandardMaterial3D:
 			return _textured_material(color, "garage_concrete", 0.09, 4.0)
 		"Showroom roof":
 			return _textured_material(color, "roof_metal", 0.14, 2.0)
-		"Reception desk":
+		"Reception desk", "Office desk":
 			return _textured_material(color, "wood", 0.12, 2.0)
+		"Office floor", "Apartment floor":
+			return _textured_material(color, "worn_floorboards", 0.075, 2.5)
+		"Bus stop platform":
+			return _textured_material(color, "pavement", 0.10, 3.0)
+		"Office back wall", "Office side wall", "Apartment back wall":
+			return _textured_material(color, "painted_plaster", 0.045, 2.0)
 		_:
 			return _material(color)
 
@@ -293,6 +308,11 @@ func _paint_material(color: Color) -> StandardMaterial3D:
 	return mat
 
 func _textured_material(color: Color, style: String, frequency: float, uv_scale: float) -> StandardMaterial3D:
+	# Reuse generated materials instead of allocating a separate 256px noise texture
+	# for every wall/building. This cuts startup work and GPU memory on Android.
+	var cache_key := "%s|%s|%.4f|%.2f" % [style, color.to_html(true), frequency, uv_scale]
+	if generated_material_cache.has(cache_key):
+		return generated_material_cache[cache_key] as StandardMaterial3D
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
 	mat.roughness = 0.92
@@ -312,6 +332,7 @@ func _textured_material(color: Color, style: String, frequency: float, uv_scale:
 	texture.height = 256
 	texture.seamless = true
 	mat.albedo_texture = texture
+	generated_material_cache[cache_key] = mat
 	return mat
 
 func _material(color: Color) -> StandardMaterial3D:
@@ -1216,6 +1237,7 @@ func _update_mission_marker() -> void:
 
 func _save_game() -> void:
 	var data := ConfigFile.new()
+	data.set_value("career", "save_version", 2)
 	data.set_value("career", "mission_stage", mission_stage)
 	data.set_value("career", "cash", cash)
 	data.set_value("career", "sales_completed", sales_completed)
@@ -1226,11 +1248,22 @@ func _save_game() -> void:
 func _load_game() -> void:
 	var data := ConfigFile.new()
 	if data.load("user://underworld_save.cfg") == OK:
-		mission_stage = int(data.get_value("career", "mission_stage", 0))
-		cash = int(data.get_value("career", "cash", 2450))
-		sales_completed = int(data.get_value("career", "sales_completed", 0))
-		stock_owned = bool(data.get_value("career", "stock_owned", false))
-		stock_repaired = bool(data.get_value("career", "stock_repaired", false))
+		# Older prototype saves could skip the new opening and drop the player
+		# straight into the dealership. Start those saves cleanly once.
+		var save_version := int(data.get_value("career", "save_version", 0))
+		if save_version < 2:
+			mission_stage = 0
+			cash = 2450
+			sales_completed = 0
+			stock_owned = false
+			stock_repaired = false
+			_save_game()
+		else:
+			mission_stage = int(data.get_value("career", "mission_stage", 0))
+			cash = int(data.get_value("career", "cash", 2450))
+			sales_completed = int(data.get_value("career", "sales_completed", 0))
+			stock_owned = bool(data.get_value("career", "stock_owned", false))
+			stock_repaired = bool(data.get_value("career", "stock_repaired", false))
 	first_deal_done = mission_stage >= 1
 	if is_instance_valid(marcus):
 		marcus.visible = mission_stage == 1 or mission_stage == 8 or mission_stage == 11
