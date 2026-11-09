@@ -62,13 +62,21 @@ func _run_tests() -> void:
 	if not _check(game.cash == 5700, "Chapter completion should add $2,500."):
 		return
 
-	# First additional sale.
+	# First additional sale: buy, repair at the workshop, then sell.
 	game._interact()
+	game.player.global_position = game.repair_bay_position
 	game._interact()
-	if not _check(not game.stock_owned and game.sales_completed == 2, "First trade-in sale should complete."):
+	if not _check(game.stock_repaired, "Workshop should repair the purchased trade-in."):
 		return
-	# Second additional sale unlocks Chapter 2.
+	game.player.global_position = Vector3(0, 1, -1.2)
 	game._interact()
+	if not _check(not game.stock_owned and game.sales_completed == 2, "First repaired trade-in sale should complete."):
+		return
+	# Second repaired sale unlocks Chapter 2.
+	game._interact()
+	game.player.global_position = game.repair_bay_position
+	game._interact()
+	game.player.global_position = Vector3(0, 1, -1.2)
 	game._interact()
 	if not _check(game.mission_stage == 5, "Two profitable trade-in sales should unlock Chapter 2."):
 		return
